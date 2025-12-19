@@ -14,6 +14,7 @@ class ChildHomeScreen extends ConsumerStatefulWidget {
 class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen> {
   List<dynamic> _tasks = [];
   bool _loading = true;
+  final Set<int> _submitting = {};
 
   @override
   void initState() {
@@ -36,6 +37,27 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen> {
     }
   }
 
+  Future<void> _submitTask(int taskId) async {
+    final session = ref.read(sessionProvider);
+    if (session.token == null) return;
+    setState(() => _submitting.add(taskId));
+    final api = ApiClient(token: session.token!);
+    try {
+      await api.submitTask(taskId: taskId, comment: 'Erledigt');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aufgabe eingereicht')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Einreichen fehlgeschlagen')),
+      );
+    } finally {
+      setState(() => _submitting.remove(taskId));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,6 +72,12 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen> {
                   child: ListTile(
                     title: Text(task['title'] ?? 'Aufgabe'),
                     subtitle: Text('${task['duration_minutes'] ?? 0} Minuten • ${task['target_device'] ?? ''}'),
+                    trailing: ElevatedButton(
+                      onPressed: _submitting.contains(task['id']) ? null : () => _submitTask(task['id']),
+                      child: _submitting.contains(task['id'])
+                          ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Text('Erledigt'),
+                    ),
                   ),
                 );
               },
