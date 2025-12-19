@@ -1,5 +1,11 @@
 # Changelog – ZeitSchatz
 
+## 2024-12-19
+- User-Management API: `POST/GET/PATCH/DELETE /users`, `GET /users/children` (parent-only).
+- Seed-Script erweitert: CLI-Parameter für Namen/PINs (`--parent-name`, `--child-pin`, etc.).
+- CLAUDE.md erstellt für Claude Code Kontext.
+- TODO.md überarbeitet: erledigte Punkte markiert, offene Punkte konkretisiert.
+
 ## 2024-04-02
 - Initiales Backend-Skeleton (FastAPI, Health-Route, Settings).
 - Datenmodell: Users, ChildProfile, Tasks (mit duration_minutes, target_device), Submissions, TanLedger (minutes, target_device, tan_code, valid_until), DeviceTokens.

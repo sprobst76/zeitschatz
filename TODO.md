@@ -1,32 +1,53 @@
 # TODO – ZeitSchatz (MVP)
 
 ## Backend
-- [ ] Alembic Migration ausführen (`uv run alembic upgrade head -c backend/alembic.ini`).
-- [ ] Auth-Flow fertigstellen: PIN-Login/JWT ist angelegt, aber User-Management (Anlegen/Seed) und Refresh fehlen.
-- [ ] Task-Router: Today-Filter verbessern, Zuweisungen prüfen.
-- [ ] Submission-Router: History, bessere Validierungen, Push-Hook.
-- [ ] Ledger-Router: Guthaben pro Kind aggregiert, Auszahlungs-Workflow feinjustieren.
-- [ ] Photo-Upload Endpoint + Storage-Service (lokal, später MinIO).
-- [ ] Notifications-Service (FCM) + Token-Registration.
-- [ ] Retention-Job (Fotos löschen nach 14 Tagen).
-- [ ] Tests: Services + API (TestClient, SQLite in-memory).
- - [ ] CORS/Ports: Default Backend-Port derzeit 8070 in Flutter-Client; ggf. vereinheitlichen und konfigurierbar machen.
+
+### Fertig
+- [x] Alembic Migration (0001_initial).
+- [x] Auth: PIN-Login → JWT (`/auth/login`, `/auth/me`).
+- [x] Task-Router: CRUD, `child_id`-Filter.
+- [x] Submission-Router: create, pending, approve, retry + Push-Hooks.
+- [x] Ledger-Router: list, payout, mark-paid.
+- [x] Photo-Upload + Storage-Service (lokal).
+- [x] Notifications-Service + Token-Registration.
+- [x] Retention-Job (APScheduler, 03:00 Uhr).
+
+### Offen
+- [x] User-Seeding / Admin-Endpoint zum Anlegen neuer Nutzer.
+  - Seed-Script: `python backend/scripts/seed_users.py` (mit `--parent-name`, `--parent-pin` etc.)
+  - API: `POST /users`, `GET /users`, `GET /users/children`, `PATCH /users/{id}`, `DELETE /users/{id}` (parent-only)
+- [ ] Auth: Refresh-Token-Endpoint.
+- [ ] Task-Router: Today-Filter mit Wochentag-Logik (`recurrence` JSON auswerten).
+- [ ] Submission-Router: History-Endpoint (`/submissions/history?child_id=...`).
+- [ ] Ledger-Router: Aggregat-Endpoint (Summe unbezahlt pro Kind/Gerät).
+- [ ] Tests: Services + API (pytest, SQLite in-memory).
+- [ ] MinIO/S3-Storage optional aktivierbar machen.
 
 ## Frontend (Flutter)
-- [ ] Scaffold `main.dart`, Router (GoRouter), State (Riverpod).
-- [ ] Rollen-Gate (Parent/Child), PIN/Bio für Eltern.
-- [ ] Child: Heute-Liste, Task-Detail, Submission mit optionalem Foto/Overlay, Offline-Queue.
-- [ ] Parent: Inbox (Pending), Approve/Retry UI, Task-Management, Payout-Screen (Gerät + Dauer + TAN-Code).
-- [ ] Ledger/Guthaben pro Gerät mit Ablaufanzeige.
-- [ ] Push-Setup (FCM), Token-Registrierung.
+
+### Fertig
+- [x] Scaffold `main.dart`, Router (GoRouter), State (Riverpod).
+- [x] Rollen-Auswahl (RoleSelectScreen) mit Seed-PINs.
+- [x] Child: Task-Liste mit Submit-Button.
+- [x] Parent: Inbox mit Approve/Retry-Dialogen.
+
+### Offen
+- [ ] PIN-Eingabe (eigener Screen statt Seed-Auswahl), optional Biometrie für Eltern.
+- [ ] Child: Task-Detail-Screen mit Beschreibung.
+- [ ] Child: Foto-Aufnahme mit Overlay (Timestamp, Task) + Upload.
+- [ ] Child: Offline-Queue (Hive) für Submissions ohne Netz.
+- [ ] Parent: Task-Management (Liste, Neu/Bearbeiten, Zuweisung).
+- [ ] Parent: Payout-Screen (unbezahlte Einträge markieren, TAN eingeben).
+- [ ] Ledger-Screen: Guthaben pro Gerät mit Ablaufanzeige (Kind + Eltern).
+- [ ] Push-Setup: FCM-Token registrieren, Benachrichtigungen empfangen.
+- [ ] `baseUrl` konfigurierbar machen (Settings oder .env-Datei).
 - [ ] Tests: Widget/State, Offline-Queue Mock, API-Client Mock.
- - [ ] Web-Build: FCM entfernt; bei Bedarf Firebase-Pakete aktualisieren oder optional machen; CORS + `baseUrl` konfigurierbar gestalten.
 
 ## Infrastruktur/DevEx
-- [ ] Makefile/Taskfile für dev Befehle.
-- [ ] CI (Lint/Tests) – später.
-- [ ] Reverse Proxy Beispiel (Caddy/Nginx) für Prod (später).
+- [ ] Makefile/Taskfile für häufige dev-Befehle.
+- [ ] CI-Pipeline (Lint + Tests) für GitHub Actions.
+- [ ] Reverse-Proxy-Beispiel (Caddy/Nginx) für Prod-Deployment.
 
-## Inhalte/Docs
-- [ ] Ausführliche API-Doku (OpenAPI automatisch, README verlinken).
-- [ ] Screenshots/Flowcharts, wenn UI steht.
+## Docs
+- [ ] OpenAPI-Doku verlinken (FastAPI generiert automatisch unter `/docs`).
+- [ ] Screenshots/Flowcharts ergänzen, sobald UI steht.

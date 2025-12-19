@@ -7,6 +7,7 @@ from app.api.routes.ledger import router as ledger_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.photos import router as photos_router
 from app.api.routes.notifications import router as notifications_router
+from app.api.routes.users import router as users_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.session import SessionLocal
 from app.jobs.retention import clean_expired_photos
@@ -23,6 +24,7 @@ def create_app() -> FastAPI:
     # Routers
     app.include_router(health_router, prefix="/health", tags=["health"])
     app.include_router(auth_router, prefix="/auth", tags=["auth"])
+    app.include_router(users_router, prefix="/users", tags=["users"])
     app.include_router(tasks_router, prefix="/tasks", tags=["tasks"])
     app.include_router(submissions_router, prefix="/submissions", tags=["submissions"])
     app.include_router(ledger_router, prefix="/ledger", tags=["ledger"])
