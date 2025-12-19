@@ -22,7 +22,7 @@ def create_submission(
     payload: SubmissionCreate,
     db: Session = Depends(get_db_session),
     user=Depends(get_current_user),
-    background_tasks: BackgroundTasks | None = None,
+    background_tasks: BackgroundTasks = None,
 ):
     task = db.get(Task, payload.task_id)
     if not task or not task.is_active:
@@ -66,7 +66,7 @@ def approve_submission(
     submission_id: int,
     decision: SubmissionDecision,
     db: Session = Depends(get_db_session),
-    background_tasks: BackgroundTasks | None = None,
+    background_tasks: BackgroundTasks = None,
 ):
     submission = db.get(Submission, submission_id)
     if not submission:
