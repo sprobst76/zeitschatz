@@ -28,6 +28,7 @@ Familieninterne App, mit der Kinder durch erledigte Aufgaben virtuelle TANs verd
   - Linux: `flutter config --enable-linux-desktop` → `flutter run -d linux` / `flutter build linux`
   - Web/Chrome: `flutter config --enable-web` → `flutter run -d chrome` / `flutter build web`
   - Für Web CORS anpassen (`CORS_ORIGINS` in `.env`, z. B. `http://localhost:8080`), Backend per TLS/Proxy bereitstellen.
+- Heimnetz-Dev ohne Login: Setze in `.env` `DEV_BYPASS_AUTH=true` (optional `DEV_USER_ID/ROLE`). Dann akzeptiert das Backend alle Anfragen als den konfigurierten Nutzer.
 - Tests (später ergänzen): `uv run pytest` bzw. `poetry run pytest` und `flutter test`.
 
 Mehr Details im vollständigen Plan: `PROJECT.md`.

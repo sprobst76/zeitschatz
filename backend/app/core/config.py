@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     tan_default_duration_minutes: int = Field(default=30, alias="TAN_DEFAULT_DURATION_MINUTES")
     photo_max_bytes: int = Field(default=5_000_000, alias="PHOTO_MAX_BYTES")
     cors_origins: list[str] = Field(default_factory=lambda: ["*"], alias="CORS_ORIGINS")
+    dev_bypass_auth: bool = Field(default=False, alias="DEV_BYPASS_AUTH")
+    dev_user_id: int = Field(default=1, alias="DEV_USER_ID")
+    dev_user_role: str = Field(default="parent", alias="DEV_USER_ROLE")
 
     class Config:
         env_file = ".env"

@@ -37,6 +37,17 @@ def decode_token(token: str) -> dict[str, Any]:
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+    if settings.dev_bypass_auth:
+        user = db.get(User, settings.dev_user_id)
+        if user:
+            return user
+        # fallback: create stub user with configured role
+        stub = User(name="dev-user", role=settings.dev_user_role, pin_hash=hash_pin("dev"))
+        db.add(stub)
+        db.commit()
+        db.refresh(stub)
+        return stub
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
