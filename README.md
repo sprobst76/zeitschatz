@@ -21,6 +21,7 @@ Familieninterne App, mit der Kinder durch erledigte Aufgaben virtuelle TANs verd
 - Bekannte Einschränkung: In-Process-TestClient (Starlette/httpx) hängt beim ersten Request in dieser Umgebung. Workaround: echten `uvicorn` starten und via curl/httpx testen (siehe unten).
 - Fotos: `/photos/upload?submission_id=` (multipart) speichert im lokalen `STORAGE_DIR`, setzt `photo_expires_at`. Abruf via `/photos/{submission_id}` (auth erforderlich). Retention-Job noch folgen.
 - Retention-Job: Läuft täglich 03:00 (APScheduler) und löscht abgelaufene Fotos (`photo_expires_at` oder mtime-Fallback). Logs in stdout.
+- Push: `POST /notifications/register` speichert FCM-Token. Hooks: Bei neuer Submission Push an Eltern (`submission_pending`), bei Approval optional an Kind (`submission_approved`). Ohne `FCM_SERVER_KEY` wird Push nur geloggt/übersprungen.
 - Tests (später ergänzen): `uv run pytest` bzw. `poetry run pytest` und `flutter test`.
 
 Mehr Details im vollständigen Plan: `PROJECT.md`.

@@ -21,6 +21,21 @@ def register_token(db: Session, user_id: int, token: str, platform: str | None =
     return device
 
 
+def get_parent_tokens(db: Session) -> List[str]:
+    tokens = (
+        db.query(DeviceToken.fcm_token)
+        .join(DeviceToken.user)
+        .filter(DeviceToken.user.has(role="parent"))
+        .all()
+    )
+    return [t[0] for t in tokens]
+
+
+def get_child_tokens(db: Session, child_id: int) -> List[str]:
+    tokens = db.query(DeviceToken.fcm_token).filter(DeviceToken.user_id == child_id).all()
+    return [t[0] for t in tokens]
+
+
 async def send_push(tokens: List[str], payload: dict) -> None:
     if not settings.fcm_server_key:
         print("[push] FCM_SERVER_KEY not set, skipping push")

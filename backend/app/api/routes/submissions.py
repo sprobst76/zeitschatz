@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import BackgroundTasks
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -11,7 +12,7 @@ from app.models.ledger import TanLedger
 from app.models.submission import Submission
 from app.models.task import Task
 from app.schemas.submission import SubmissionCreate, SubmissionDecision, SubmissionRead
-from app.services.notifications import send_push
+from app.services.notifications import send_push, get_parent_tokens
 
 router = APIRouter()
 
@@ -21,6 +22,7 @@ def create_submission(
     payload: SubmissionCreate,
     db: Session = Depends(get_db_session),
     user=Depends(get_current_user),
+    background_tasks: BackgroundTasks | None = None,
 ):
     task = db.get(Task, payload.task_id)
     if not task or not task.is_active:
@@ -37,6 +39,19 @@ def create_submission(
     db.add(submission)
     db.commit()
     db.refresh(submission)
+    # Push an Eltern
+    if background_tasks:
+        tokens = get_parent_tokens(db)
+        background_tasks.add_task(
+            send_push,
+            tokens,
+            {
+                "type": "submission_pending",
+                "child_id": submission.child_id,
+                "task_id": submission.task_id,
+                "submission_id": submission.id,
+            },
+        )
     return submission
 
 
@@ -51,6 +66,7 @@ def approve_submission(
     submission_id: int,
     decision: SubmissionDecision,
     db: Session = Depends(get_db_session),
+    background_tasks: BackgroundTasks | None = None,
 ):
     submission = db.get(Submission, submission_id)
     if not submission:
@@ -76,8 +92,21 @@ def approve_submission(
     db.add(submission)
     db.commit()
     db.refresh(submission)
-    # TODO: send push to child devices (if registered)
-    # async call is not awaited here; would need background task or event loop access
+    # Push an Kind
+    if background_tasks:
+        from app.services.notifications import get_child_tokens
+
+        tokens = get_child_tokens(db, submission.child_id)
+        background_tasks.add_task(
+            send_push,
+            tokens,
+            {
+                "type": "submission_approved",
+                "submission_id": submission.id,
+                "minutes": ledger_entry.minutes,
+                "target_device": ledger_entry.target_device,
+            },
+        )
     return submission
 
 
