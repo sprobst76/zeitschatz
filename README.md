@@ -8,14 +8,15 @@ Familieninterne App, mit der Kinder durch erledigte Aufgaben virtuelle TANs verd
 - Backend lokal starten:
   ```bash
   cp .env.sample .env
+  # optional: DEV_BYPASS_AUTH=true für Heimnetz ohne Login
   docker-compose up -d db
-  uv run fastapi dev backend/app/main.py  # alternativ: poetry run fastapi dev backend/app/main.py
+  uvicorn app.main:app --app-dir backend/app --host 0.0.0.0 --port 8070
   ```
 - Flutter-App:
   ```bash
   cd frontend
   flutter pub get
-  flutter run
+  flutter run -d linux   # oder -d android / -d chrome --web-port=8081
   ```
 - Auth: `POST /auth/login` mit `user_id` + `pin` → Bearer-Token. (User-Seeding/Refresh noch offen.)
 - Bekannte Einschränkung: In-Process-TestClient (Starlette/httpx) hängt beim ersten Request in dieser Umgebung. Workaround: echten `uvicorn` starten und via curl/httpx testen (siehe unten).
@@ -27,8 +28,9 @@ Familieninterne App, mit der Kinder durch erledigte Aufgaben virtuelle TANs verd
   - Android: `flutter run -d android` bzw. `flutter build apk --release`
   - Linux: `flutter config --enable-linux-desktop` → `flutter run -d linux` / `flutter build linux`
   - Web/Chrome: `flutter config --enable-web` → `flutter run -d chrome` / `flutter build web`
-  - Für Web CORS anpassen (`CORS_ORIGINS` in `.env`, z. B. `http://localhost:8080`), Backend per TLS/Proxy bereitstellen.
+  - Für Web CORS anpassen (`CORS_ORIGINS` in `.env`, z. B. `http://localhost:8081`), Backend per TLS/Proxy bereitstellen.
 - Heimnetz-Dev ohne Login: Setze in `.env` `DEV_BYPASS_AUTH=true` (optional `DEV_USER_ID/ROLE`). Dann akzeptiert das Backend alle Anfragen als den konfigurierten Nutzer.
+- Backend-Smoketest + Linux-Build: `./scripts/dev_smoke.sh` (setzt laufende GUI für Linux voraus).
 - Tests (später ergänzen): `uv run pytest` bzw. `poetry run pytest` und `flutter test`.
 
 Mehr Details im vollständigen Plan: `PROJECT.md`.
