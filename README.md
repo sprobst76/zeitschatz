@@ -17,6 +17,7 @@ Familieninterne App, mit der Kinder durch erledigte Aufgaben virtuelle TANs verd
   flutter pub get
   flutter run
   ```
+- Vorläufige Auth im Backend: Header `X-User-Id` und `X-User-Role` (parent|child) setzen, bis PIN/JWT implementiert ist.
 - Tests (später ergänzen): `uv run pytest` bzw. `poetry run pytest` und `flutter test`.
 
 Mehr Details im vollständigen Plan: `PROJECT.md`.
