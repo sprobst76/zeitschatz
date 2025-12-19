@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     photo_retention_days: int = Field(default=14, alias="PHOTO_RETENTION_DAYS")
     fcm_server_key: str = Field(default="", alias="FCM_SERVER_KEY")
     tan_default_duration_minutes: int = Field(default=30, alias="TAN_DEFAULT_DURATION_MINUTES")
+    photo_max_bytes: int = Field(default=5_000_000, alias="PHOTO_MAX_BYTES")
 
     class Config:
         env_file = ".env"

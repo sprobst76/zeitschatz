@@ -13,5 +13,6 @@ class Submission(Base):
     status = Column(String(20), nullable=False, default="pending")
     comment = Column(Text, nullable=True)
     photo_path = Column(String(255), nullable=True)
+    photo_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)

@@ -61,6 +61,7 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=20), nullable=False, server_default="pending"),
         sa.Column("comment", sa.Text(), nullable=True),
         sa.Column("photo_path", sa.String(length=255), nullable=True),
+        sa.Column("photo_expires_at", sa.DateTime(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
         sa.Column(
             "updated_at",
