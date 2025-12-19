@@ -2,10 +2,10 @@
 
 ## Backend
 - [ ] Alembic Migration ausführen (`uv run alembic upgrade head -c backend/alembic.ini`).
-- [ ] Auth-Flow: PIN-Login, JWT, Rollen-Scopes.
-- [ ] Task-Router: CRUD, Today-Filter, Zuweisungen.
-- [ ] Submission-Router: Create (inkl. Foto-Pfad), Approve/Retry, History.
-- [ ] Ledger-Router: Guthaben pro Kind, Payout (setzt `tan_code`, `valid_until`, `paid_out`).
+- [ ] Auth-Flow fertigstellen: PIN-Login/JWT ist angelegt, aber User-Management (Anlegen/Seed) und Refresh fehlen.
+- [ ] Task-Router: Today-Filter verbessern, Zuweisungen prüfen.
+- [ ] Submission-Router: History, bessere Validierungen, Push-Hook.
+- [ ] Ledger-Router: Guthaben pro Kind aggregiert, Auszahlungs-Workflow feinjustieren.
 - [ ] Photo-Upload Endpoint + Storage-Service (lokal, später MinIO).
 - [ ] Notifications-Service (FCM) + Token-Registration.
 - [ ] Retention-Job (Fotos löschen nach 14 Tagen).
