@@ -31,11 +31,25 @@ class ApiClient {
     required int minutes,
     required String targetDevice,
     String? tanCode,
+    String? validUntil,
+    String? comment,
   }) async {
     final res = await _dio.post('/submissions/$submissionId/approve', data: {
       'minutes': minutes,
       'target_device': targetDevice,
       'tan_code': tanCode,
+      'valid_until': validUntil,
+      'comment': comment,
+    });
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> retrySubmission(
+    int submissionId, {
+    String? comment,
+  }) async {
+    final res = await _dio.post('/submissions/$submissionId/retry', data: {
+      'comment': comment,
     });
     return res.data as Map<String, dynamic>;
   }
