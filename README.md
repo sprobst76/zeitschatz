@@ -23,6 +23,11 @@ Familieninterne App, mit der Kinder durch erledigte Aufgaben virtuelle TANs verd
 - Retention-Job: Läuft täglich 03:00 (APScheduler) und löscht abgelaufene Fotos (`photo_expires_at` oder mtime-Fallback). Logs in stdout.
 - Push: `POST /notifications/register` speichert FCM-Token. Hooks: Bei neuer Submission Push an Eltern (`submission_pending`), bei Approval optional an Kind (`submission_approved`). Ohne `FCM_SERVER_KEY` wird Push nur geloggt/übersprungen.
 - Flutter-Skeleton: `flutter run` startet eine einfache Rollenauswahl (Seed-PINs 1234/0000), Child-Home zeigt Tasks, Parent-Inbox zeigt Pending-Submissions. API-Client unter `frontend/lib/services/api_client.dart`.
+- Plattform-Builds:
+  - Android: `flutter run -d android` bzw. `flutter build apk --release`
+  - Linux: `flutter config --enable-linux-desktop` → `flutter run -d linux` / `flutter build linux`
+  - Web/Chrome: `flutter config --enable-web` → `flutter run -d chrome` / `flutter build web`
+  - Für Web CORS anpassen (`CORS_ORIGINS` in `.env`, z. B. `http://localhost:8080`), Backend per TLS/Proxy bereitstellen.
 - Tests (später ergänzen): `uv run pytest` bzw. `poetry run pytest` und `flutter test`.
 
 Mehr Details im vollständigen Plan: `PROJECT.md`.

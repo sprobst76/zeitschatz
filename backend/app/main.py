@@ -7,6 +7,7 @@ from app.api.routes.ledger import router as ledger_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.photos import router as photos_router
 from app.api.routes.notifications import router as notifications_router
+from fastapi.middleware.cors import CORSMiddleware
 from app.db.session import SessionLocal
 from app.jobs.retention import clean_expired_photos
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -27,6 +28,15 @@ def create_app() -> FastAPI:
     app.include_router(ledger_router, prefix="/ledger", tags=["ledger"])
     app.include_router(photos_router, prefix="/photos", tags=["photos"])
     app.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
+
+    # CORS for web/desktop
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.on_event("startup")
     async def startup_event():
