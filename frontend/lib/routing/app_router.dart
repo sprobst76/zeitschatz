@@ -10,7 +10,6 @@ import '../state/app_state.dart';
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/role',
-    refreshListenable: GoRouterRefreshStream(ref.watch(sessionProvider.stream)),
     routes: [
       GoRoute(
         path: '/role',
