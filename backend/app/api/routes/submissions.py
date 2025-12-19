@@ -11,6 +11,7 @@ from app.models.ledger import TanLedger
 from app.models.submission import Submission
 from app.models.task import Task
 from app.schemas.submission import SubmissionCreate, SubmissionDecision, SubmissionRead
+from app.services.notifications import send_push
 
 router = APIRouter()
 
@@ -75,6 +76,8 @@ def approve_submission(
     db.add(submission)
     db.commit()
     db.refresh(submission)
+    # TODO: send push to child devices (if registered)
+    # async call is not awaited here; would need background task or event loop access
     return submission
 
 

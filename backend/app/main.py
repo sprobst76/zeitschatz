@@ -6,6 +6,7 @@ from app.api.routes.submissions import router as submissions_router
 from app.api.routes.ledger import router as ledger_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.photos import router as photos_router
+from app.api.routes.notifications import router as notifications_router
 from app.db.session import SessionLocal
 from app.jobs.retention import clean_expired_photos
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
     app.include_router(submissions_router, prefix="/submissions", tags=["submissions"])
     app.include_router(ledger_router, prefix="/ledger", tags=["ledger"])
     app.include_router(photos_router, prefix="/photos", tags=["photos"])
+    app.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
 
     @app.on_event("startup")
     async def startup_event():
