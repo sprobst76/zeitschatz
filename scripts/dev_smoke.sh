@@ -9,7 +9,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV="${ROOT_DIR}/.venv"
 BACKEND_PORT=${BACKEND_PORT:-8000}
-BASE_URL="http://localhost:${BACKEND_PORT}"
+BASE_URL="http://192.168.0.144:${BACKEND_PORT}"
 
 if [ ! -d "${VENV}" ]; then
   echo "Venv not found at ${VENV}. Please create and install backend deps first."

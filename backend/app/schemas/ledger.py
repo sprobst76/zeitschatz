@@ -24,3 +24,10 @@ class PayoutRequest(BaseModel):
     tan_code: str | None = None
     valid_until: datetime | None = None
     reason: str | None = None
+
+
+class LedgerAggregateRead(BaseModel):
+    child_id: int
+    target_device: str | None
+    total_minutes: int
+    entry_count: int

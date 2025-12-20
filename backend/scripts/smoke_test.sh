@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Simple smoke test against a running uvicorn server on localhost:8000
+# Simple smoke test against a running uvicorn server on 192.168.0.144:8070
 # Requires: jq, curl, server running (uvicorn app.main:app --port 8000)
 
-BASE_URL=${BASE_URL:-http://localhost:8000}
+BASE_URL=${BASE_URL:-http://192.168.0.144:8070}
 
 echo "Health..."
 curl -s "$BASE_URL/health" | jq .

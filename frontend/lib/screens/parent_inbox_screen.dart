@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../services/api_client.dart';
 import '../state/app_state.dart';
 
 class ParentInboxScreen extends ConsumerStatefulWidget {
@@ -25,7 +25,7 @@ class _ParentInboxScreenState extends ConsumerState<ParentInboxScreen> {
   Future<void> _load() async {
     final session = ref.read(sessionProvider);
     if (session.token == null) return;
-    final api = ApiClient(token: session.token!);
+    final api = ref.read(apiClientProvider);
     try {
       final res = await api.fetchPendingSubmissions();
       setState(() {
@@ -41,7 +41,7 @@ class _ParentInboxScreenState extends ConsumerState<ParentInboxScreen> {
     final session = ref.read(sessionProvider);
     if (session.token == null) return;
     setState(() => _working = true);
-    final api = ApiClient(token: session.token!);
+    final api = ref.read(apiClientProvider);
     try {
       await api.approveSubmission(submissionId, minutes: 30, targetDevice: 'phone', tanCode: 'ABC12345');
       await _load();
@@ -95,7 +95,7 @@ class _ParentInboxScreenState extends ConsumerState<ParentInboxScreen> {
     final session = ref.read(sessionProvider);
     if (session.token == null) return;
     setState(() => _working = true);
-    final api = ApiClient(token: session.token!);
+    final api = ref.read(apiClientProvider);
     try {
       await api.approveSubmission(submissionId, minutes: minutes, targetDevice: device, tanCode: tan, comment: comment);
       await _load();
@@ -113,7 +113,7 @@ class _ParentInboxScreenState extends ConsumerState<ParentInboxScreen> {
     final session = ref.read(sessionProvider);
     if (session.token == null) return;
     setState(() => _working = true);
-    final api = ApiClient(token: session.token!);
+    final api = ref.read(apiClientProvider);
     try {
       await api.retrySubmission(submissionId, comment: comment);
       await _load();
@@ -130,7 +130,21 @@ class _ParentInboxScreenState extends ConsumerState<ParentInboxScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Inbox')),
+      appBar: AppBar(
+        title: const Text('Inbox'),
+        actions: [
+          IconButton(
+            onPressed: () => context.go('/parent/history'),
+            icon: const Icon(Icons.history),
+            tooltip: 'Historie',
+          ),
+          IconButton(
+            onPressed: () => context.go('/parent/ledger-aggregate'),
+            icon: const Icon(Icons.summarize),
+            tooltip: 'Ledger-Aggregat',
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

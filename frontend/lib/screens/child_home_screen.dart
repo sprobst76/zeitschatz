@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../services/api_client.dart';
 import '../state/app_state.dart';
 
 class ChildHomeScreen extends ConsumerStatefulWidget {
@@ -25,9 +24,9 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen> {
   Future<void> _fetch() async {
     final session = ref.read(sessionProvider);
     if (session.userId == null || session.token == null) return;
-    final api = ApiClient(token: session.token!);
+    final api = ref.read(apiClientProvider);
     try {
-      final tasks = await api.fetchTasksForChild(session.userId!);
+      final tasks = await api.fetchTodayTasksForChild(session.userId!);
       setState(() {
         _tasks = tasks;
         _loading = false;
@@ -41,7 +40,7 @@ class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen> {
     final session = ref.read(sessionProvider);
     if (session.token == null) return;
     setState(() => _submitting.add(taskId));
-    final api = ApiClient(token: session.token!);
+    final api = ref.read(apiClientProvider);
     try {
       await api.submitTask(taskId: taskId, comment: 'Erledigt');
       if (!mounted) return;

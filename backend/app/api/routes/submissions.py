@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi import BackgroundTasks
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -29,7 +29,7 @@ def create_submission(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not available")
     submission = Submission(
         task_id=payload.task_id,
-        child_id=user["id"],
+        child_id=user.id,
         status="pending",
         comment=payload.comment,
         photo_path=payload.photo_path,
@@ -53,6 +53,21 @@ def create_submission(
             },
         )
     return submission
+
+
+@router.get("/history", response_model=List[SubmissionRead])
+def list_history(
+    child_id: int | None = Query(default=None, description="Filter auf Kind-ID (parent-only)"),
+    db: Session = Depends(get_db_session),
+    user=Depends(get_current_user),
+):
+    stmt = select(Submission).order_by(Submission.created_at.desc())
+    if user.role == "child":
+        stmt = stmt.where(Submission.child_id == user.id)
+    else:
+        if child_id is not None:
+            stmt = stmt.where(Submission.child_id == child_id)
+    return db.execute(stmt).scalars().all()
 
 
 @router.get("/pending", response_model=List[SubmissionRead], dependencies=[Depends(require_role("parent"))])

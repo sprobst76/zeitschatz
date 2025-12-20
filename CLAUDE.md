@@ -93,7 +93,7 @@ API endpoints:
 - **Widgets**: Reusable components in `widgets/`
 - **Offline**: Hive for local persistence and offline queue
 
-API base URL is configured in `services/api_client.dart` (default: `http://localhost:8070`).
+API base URL is configured in `services/api_client.dart` (default: `http://192.168.0.144:8070`).
 
 ### Database
 

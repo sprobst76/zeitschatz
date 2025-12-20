@@ -25,8 +25,10 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
     try {
       final userId = role == 'parent' ? 1 : 2; // Seed IDs aus Backend
       final api = ApiClient();
-      final token = await api.login(userId: userId, pin: _pinController.text);
-      ref.read(sessionProvider.notifier).setSession(token: token, userId: userId, role: role);
+      final tokens = await api.login(userId: userId, pin: _pinController.text);
+      ref
+          .read(sessionProvider.notifier)
+          .setSession(token: tokens.accessToken, refreshToken: tokens.refreshToken, userId: userId, role: role);
       if (mounted) {
         context.go(role == 'parent' ? '/parent' : '/child');
       }

@@ -25,8 +25,23 @@ def hash_pin(pin: str) -> str:
 
 def create_access_token(data: dict[str, Any], expires_minutes: int | None = None) -> str:
     to_encode = data.copy()
+    if "sub" in to_encode:
+        to_encode["sub"] = str(to_encode["sub"])
+    to_encode["type"] = "access"
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=expires_minutes or settings.access_token_expire_minutes
+    )
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, settings.secret_key, algorithm="HS256")
+
+
+def create_refresh_token(data: dict[str, Any], expires_days: int | None = None) -> str:
+    to_encode = data.copy()
+    if "sub" in to_encode:
+        to_encode["sub"] = str(to_encode["sub"])
+    to_encode["type"] = "refresh"
+    expire = datetime.now(timezone.utc) + timedelta(
+        days=expires_days or settings.refresh_token_expire_days
     )
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.secret_key, algorithm="HS256")
@@ -55,10 +70,16 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
     try:
         payload = decode_token(token)
-        user_id: int | None = payload.get("sub")
+        user_id_raw = payload.get("sub")
     except JWTError:
         raise credentials_exception
-    if user_id is None:
+    if payload.get("type") == "refresh":
+        raise credentials_exception
+    if user_id_raw is None:
+        raise credentials_exception
+    try:
+        user_id = int(user_id_raw)
+    except (TypeError, ValueError):
         raise credentials_exception
     user = db.get(User, user_id)
     if not user or not user.is_active:
