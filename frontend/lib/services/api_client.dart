@@ -129,6 +129,11 @@ class ApiClient {
     return res.data as List<dynamic>;
   }
 
+  Future<List<dynamic>> fetchMyLedger() async {
+    final res = await _dio.get('/ledger/my');
+    return res.data as List<dynamic>;
+  }
+
   Future<void> registerPushToken({required String token, required String platform}) async {
     await _dio.post('/notifications/register', queryParameters: {'token': token, 'platform': platform});
   }

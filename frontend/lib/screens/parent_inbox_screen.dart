@@ -43,7 +43,7 @@ class _ParentInboxScreenState extends ConsumerState<ParentInboxScreen> {
     setState(() => _working = true);
     final api = ref.read(apiClientProvider);
     try {
-      await api.approveSubmission(submissionId, minutes: 30, targetDevice: 'phone', tanCode: 'ABC12345');
+      await api.approveSubmission(submissionId, minutes: 30, targetDevice: 'phone');
       await _load();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bestätigt')));
@@ -58,7 +58,7 @@ class _ParentInboxScreenState extends ConsumerState<ParentInboxScreen> {
   Future<void> _approveDialog(int submissionId) async {
     final minutesCtrl = TextEditingController(text: '30');
     final deviceCtrl = TextEditingController(text: 'phone');
-    final tanCtrl = TextEditingController(text: 'ABC12345');
+    final tanCtrl = TextEditingController();
     final commentCtrl = TextEditingController();
     await showDialog(
       context: context,

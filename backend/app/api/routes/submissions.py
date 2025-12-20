@@ -4,6 +4,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi import BackgroundTasks
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db_session
@@ -105,7 +106,14 @@ def approve_submission(
     )
     db.add(ledger_entry)
     db.add(submission)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="TAN code already exists",
+        )
     db.refresh(submission)
     # Push an Kind
     if background_tasks:

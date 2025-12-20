@@ -1,5 +1,14 @@
 # Changelog – ZeitSchatz
 
+## 2025-12-20
+- Auth: Refresh-Token-Flow ergänzt und JWT-Claims stabilisiert (`sub` als String).
+- Tasks: Today-Endpoint mit Recurrence-Filter (`/tasks/today`).
+- Submissions: History-Endpoint, Approval mit sauberem 409 bei doppeltem TAN.
+- Ledger: Aggregat-Endpoint + 409 bei doppeltem TAN.
+- Migration: `photo_expires_at` nachgezogen (idempotent).
+- Frontend: Auto-Refresh auf 401, History/Aggregate-Screens und Today-Tasks.
+- Ops: Start-Skripte, CORS als JSON-Liste, Remote-Notizen in `docs/ops.md`.
+
 ## 2024-12-19
 - User-Management API: `POST/GET/PATCH/DELETE /users`, `GET /users/children` (parent-only).
 - Seed-Script erweitert: CLI-Parameter für Namen/PINs (`--parent-name`, `--child-pin`, etc.).
