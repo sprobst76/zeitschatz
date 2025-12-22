@@ -5,6 +5,7 @@ from app.models.task import Task
 from app.models.submission import Submission
 from app.models.ledger import TanLedger
 from app.models.device import DeviceToken
+from app.models.tan_pool import TanPool
 
 __all__ = [
     "Base",
@@ -14,4 +15,5 @@ __all__ = [
     "Submission",
     "TanLedger",
     "DeviceToken",
+    "TanPool",
 ]

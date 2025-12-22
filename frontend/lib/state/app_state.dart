@@ -1,6 +1,29 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/app_config.dart';
 import '../services/api_client.dart';
+
+// Theme State
+class ThemeNotifier extends StateNotifier<ThemeMode> {
+  ThemeNotifier() : super(ThemeMode.system);
+
+  void setTheme(ThemeMode mode) {
+    state = mode;
+  }
+
+  void toggleTheme() {
+    if (state == ThemeMode.dark) {
+      state = ThemeMode.light;
+    } else {
+      state = ThemeMode.dark;
+    }
+  }
+}
+
+final themeProvider = StateNotifierProvider<ThemeNotifier, ThemeMode>((ref) {
+  return ThemeNotifier();
+});
 
 class SessionState {
   final String? token;
@@ -43,6 +66,7 @@ final apiClientProvider = Provider((ref) {
   final session = ref.watch(sessionProvider);
   final notifier = ref.read(sessionProvider.notifier);
   return ApiClient(
+    baseUrl: AppConfig.apiBaseUrl,
     token: session.token,
     refreshToken: session.refreshToken,
     onRefresh: (tokens) async {

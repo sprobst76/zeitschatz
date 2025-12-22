@@ -1,0 +1,59 @@
+version: "3.9"
+
+services:
+  zeitschatz-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=sqlite:////data/zeit.db
+      - STORAGE_DIR=/data/photos
+      - CORS_ORIGINS=https://zeitschatz.${DOMAIN},capacitor://localhost,http://localhost
+      - SECRET_KEY=${SECRET_KEY:-change-this-in-production}
+      - PHOTO_RETENTION_DAYS=14
+      - ENV=production
+    volumes:
+      - zeitschatz_data:/data
+    networks:
+      - ai-lab
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zeitschatz-api.rule=Host(`zeitschatz-api.${DOMAIN}`)"
+      - "traefik.http.routers.zeitschatz-api.entrypoints=websecure"
+      - "traefik.http.routers.zeitschatz-api.tls.certresolver=cloudflare"
+      - "traefik.http.services.zeitschatz-api.loadbalancer.server.port=8070"
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  zeitschatz-web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - API_BASE_URL=https://zeitschatz-api.${DOMAIN}
+    networks:
+      - ai-lab
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zeitschatz-web.rule=Host(`zeitschatz.${DOMAIN}`)"
+      - "traefik.http.routers.zeitschatz-web.entrypoints=websecure"
+      - "traefik.http.routers.zeitschatz-web.tls.certresolver=cloudflare"
+      - "traefik.http.services.zeitschatz-web.loadbalancer.server.port=80"
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    restart: unless-stopped
+
+networks:
+  ai-lab:
+    name: ai-lab_ai-lab
+    external: true
+
+volumes:
+  zeitschatz_data:

@@ -11,6 +11,7 @@ class Submission(Base):
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     child_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     status = Column(String(20), nullable=False, default="pending")
+    selected_device = Column(String(50), nullable=True)  # Device child chose for TAN
     comment = Column(Text, nullable=True)
     photo_path = Column(String(255), nullable=True)
     photo_expires_at = Column(DateTime, nullable=True)

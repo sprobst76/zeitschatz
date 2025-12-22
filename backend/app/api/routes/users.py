@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_db_session
 from app.core.security import hash_pin, require_role
 from app.models.user import User
-from app.schemas.user import UserCreate, UserRead
+from app.schemas.user import UserCreate, UserRead, UserUpdate
 
 router = APIRouter()
 
@@ -20,6 +20,7 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db_session)):
         name=payload.name,
         role=payload.role,
         pin_hash=hash_pin(payload.pin),
+        allowed_devices=payload.allowed_devices,
         is_active=True,
         created_at=datetime.utcnow(),
     )
@@ -43,15 +44,29 @@ def list_children(db: Session = Depends(get_db_session)):
     return db.execute(stmt).scalars().all()
 
 
-@router.patch("/{user_id}", response_model=UserRead, dependencies=[Depends(require_role("parent"))])
-def update_user(user_id: int, payload: UserCreate, db: Session = Depends(get_db_session)):
-    """Update a user (parent-only). PIN is re-hashed if provided."""
+@router.get("/{user_id}", response_model=UserRead, dependencies=[Depends(require_role("parent"))])
+def get_user(user_id: int, db: Session = Depends(get_db_session)):
+    """Get a single user by ID (parent-only)."""
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    user.name = payload.name
-    user.role = payload.role
-    user.pin_hash = hash_pin(payload.pin)
+    return user
+
+
+@router.patch("/{user_id}", response_model=UserRead, dependencies=[Depends(require_role("parent"))])
+def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db_session)):
+    """Update a user (parent-only). Only provided fields are updated."""
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if payload.name is not None:
+        user.name = payload.name
+    if payload.pin is not None:
+        user.pin_hash = hash_pin(payload.pin)
+    if payload.allowed_devices is not None:
+        user.allowed_devices = payload.allowed_devices
+    if payload.is_active is not None:
+        user.is_active = payload.is_active
     db.add(user)
     db.commit()
     db.refresh(user)
