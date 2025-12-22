@@ -23,6 +23,16 @@ def hash_pin(pin: str) -> str:
     return bcrypt.hashpw(pin.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against its hash."""
+    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+
+
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt."""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
 def create_access_token(data: dict[str, Any], expires_minutes: int | None = None) -> str:
     to_encode = data.copy()
     if "sub" in to_encode:
