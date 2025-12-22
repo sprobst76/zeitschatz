@@ -1,5 +1,6 @@
 from datetime import datetime
-from sqlalchemy import Column, DateTime, Integer, String, Boolean
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Boolean
+from sqlalchemy.orm import relationship
 
 from app.models.base import Base
 
@@ -15,3 +16,7 @@ class TanPool(Base):
     used = Column(Boolean, default=False, nullable=False)
     used_at = Column(DateTime, nullable=True)
     used_by_child_id = Column(Integer, nullable=True)  # Welches Kind hat die TAN bekommen
+
+    # Multi-family support
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=True, index=True)
+    family = relationship("Family", back_populates="tan_pool")

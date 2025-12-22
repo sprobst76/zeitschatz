@@ -28,6 +28,21 @@ class Settings(BaseSettings):
     dev_user_id: int = Field(default=1, alias="DEV_USER_ID")
     dev_user_role: str = Field(default="parent", alias="DEV_USER_ROLE")
 
+    # Email settings
+    smtp_host: str = Field(default="", alias="SMTP_HOST")
+    smtp_port: int = Field(default=587, alias="SMTP_PORT")
+    smtp_user: str = Field(default="", alias="SMTP_USER")
+    smtp_password: str = Field(default="", alias="SMTP_PASSWORD")
+    smtp_from: str = Field(default="ZeitSchatz <noreply@zeitschatz.de>", alias="SMTP_FROM")
+    smtp_tls: bool = Field(default=True, alias="SMTP_TLS")
+
+    # App URLs
+    app_url: str = Field(default="http://localhost:8070", alias="APP_URL")
+    frontend_url: str = Field(default="http://localhost:8081", alias="FRONTEND_URL")
+
+    # Family settings
+    invite_code_expiry_days: int = Field(default=7, alias="INVITE_CODE_EXPIRY_DAYS")
+
     def get_cors_origins(self) -> list[str]:
         """Parse CORS origins from comma-separated string."""
         if not self.cors_origins or self.cors_origins == "*":

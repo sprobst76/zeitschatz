@@ -1,6 +1,47 @@
 # Changelog – ZeitSchatz
 
-## 2025-12-22
+## 2025-12-22 (Multi-Family + Provider)
+
+### Multi-Family Support (Backend)
+- **Database**: Neue Tabellen `families`, `family_members`, `device_providers`, `reward_providers`
+- **Migration**: `0009_multi_family.py` - `family_id` auf Tasks, TanPool, Submissions, TanLedger
+- **User-Model**: Email/Password-Felder für Eltern-Registrierung (`email`, `password_hash`, `email_verified`, `verification_token`, `reset_token`)
+
+### Modulare Provider-Abstraktion
+- **Provider-System**: Abstrakte Basis `RewardProvider` mit konkreten Implementierungen:
+  - `KisiProvider` - TAN-basierte Belohnungen (Salfeld Kisi)
+  - `FamilyLinkProvider` - Manuelle Zeiterfassung (Google Family Link)
+  - `ManualProvider` - Einfaches Tracking ohne externes System
+- **Provider pro Gerät**: Familie kann verschiedene Provider für PC, Handy, Tablet, Konsole nutzen
+
+### Auth-Erweiterungen
+- `POST /auth/register` - Email/Passwort-Registrierung mit Verifizierung
+- `POST /auth/verify-email` - Email-Verifizierung
+- `POST /auth/login/email` - Email/Passwort-Login (Eltern)
+- `POST /auth/login/pin` - PIN-Login mit Familiencode (Kinder)
+- `POST /auth/forgot-password` - Passwort-Reset anfordern
+- `POST /auth/reset-password` - Passwort zurücksetzen
+
+### Family Management API
+- `POST /families` - Familie erstellen (wird Admin)
+- `GET /families` - Eigene Familien auflisten
+- `POST /families/{id}/children` - Kind zur Familie hinzufügen
+- `POST /families/{id}/invite` - Einladungscode generieren
+- `POST /families/join` - Mit Code beitreten
+- `GET/PATCH /families/{id}/devices/{type}` - Provider pro Gerät konfigurieren
+- `GET /families/providers/available` - Verfügbare Provider auflisten
+
+### Services
+- **Email-Service** (`app/services/email.py`): SMTP-basierter Versand für Verifizierung, Passwort-Reset, Einladungen
+
+### Config
+- SMTP-Einstellungen: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`
+- App-URLs: `APP_URL`, `FRONTEND_URL`
+- `INVITE_CODE_EXPIRY_DAYS` (default: 7)
+
+---
+
+## 2025-12-22 (Dark Mode + Deploy)
 - Dark Mode: Alle 18 Screens auf Theme-aware Farben umgestellt.
 - Fix: `withOpacity()` durch `withValues(alpha: ...)` ersetzt (Flutter Deprecation).
 - Fix: Hardcodierte Farben (`Colors.*.shade*`) durch `Theme.of(context).colorScheme.*` ersetzt.

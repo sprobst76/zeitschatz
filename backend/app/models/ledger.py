@@ -17,3 +17,7 @@ class TanLedger(Base):
     reason = Column(String(255), nullable=True)
     paid_out = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Multi-family support
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=True, index=True)
+    provider_type = Column(String(30), nullable=True)  # kisi | family_link | manual

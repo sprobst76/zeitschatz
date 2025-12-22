@@ -1,5 +1,6 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, JSON
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, JSON
+from sqlalchemy.orm import relationship
 
 from app.models.base import Base
 
@@ -20,6 +21,10 @@ class Task(Base):
     assigned_children = Column(JSON, nullable=True)  # list of child user_ids
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Multi-family support
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="CASCADE"), nullable=True, index=True)
+    family = relationship("Family", back_populates="tasks")
 
 
 class TaskTemplate(Base):
