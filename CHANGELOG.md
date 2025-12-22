@@ -1,12 +1,24 @@
 # Changelog – ZeitSchatz
 
+## 2025-12-22
+- Dark Mode: Alle 18 Screens auf Theme-aware Farben umgestellt.
+- Fix: `withOpacity()` durch `withValues(alpha: ...)` ersetzt (Flutter Deprecation).
+- Fix: Hardcodierte Farben (`Colors.*.shade*`) durch `Theme.of(context).colorScheme.*` ersetzt.
+- Fix: Android INTERNET Permission im Release-Manifest hinzugefügt.
+- Fix: Hardcodierte API-URL in `role_select_screen.dart` durch `AppConfig.apiBaseUrl` ersetzt.
+- Deploy: APK-Deploy-Skript mit GitHub Releases + Telegram-Benachrichtigung (`scripts/deploy-apk.sh`).
+- Deploy: n8n Workflow für APK-Release Notifications (`scripts/n8n-apk-release-workflow.json`).
+- Ops: CORS Origins um `capacitor://localhost` erweitert für Android-App.
+- Ops: n8n Payload-Limit auf 100MB erhöht, ZeitSchatz-Ordner gemountet.
+
 ## 2025-12-20
 - Auth: Refresh-Token-Flow ergänzt und JWT-Claims stabilisiert (`sub` als String).
 - Tasks: Today-Endpoint mit Recurrence-Filter (`/tasks/today`).
 - Submissions: History-Endpoint, Approval mit sauberem 409 bei doppeltem TAN.
 - Ledger: Aggregat-Endpoint + 409 bei doppeltem TAN.
 - Migration: `photo_expires_at` nachgezogen (idempotent).
-- Frontend: Auto-Refresh auf 401, History/Aggregate-Screens und Today-Tasks.
+- Frontend: Auto-Refresh auf 401, neue Parent-Workflows (Aufgaben, Kinder, TAN-Übersicht).
+- Frontend: Child-Flow mit Task-Detail, Foto-Upload und TAN-Budget-Tab.
 - Ops: Start-Skripte, CORS als JSON-Liste, Remote-Notizen in `docs/ops.md`.
 
 ## 2024-12-19

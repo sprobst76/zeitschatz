@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
+import 'child_achievements_screen.dart';
+import 'child_tan_screen.dart';
+import 'child_tasks_screen.dart';
+import 'learning_hub_screen.dart';
 
 class ChildHomeScreen extends ConsumerStatefulWidget {
   const ChildHomeScreen({super.key});
@@ -11,229 +16,70 @@ class ChildHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _ChildHomeScreenState extends ConsumerState<ChildHomeScreen> {
-  List<dynamic> _tasks = [];
-  List<dynamic> _submissions = [];
-  bool _loading = true;
-  final Set<int> _submitting = {};
-  final Set<int> _submitted = {}; // Lokal getrackte eingereichte Tasks
+  int _index = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    _fetch();
-  }
+  final _pages = const [
+    ChildTasksScreen(),
+    LearningHubScreen(),
+    ChildAchievementsScreen(),
+    ChildTanScreen(),
+  ];
 
-  Future<void> _fetch() async {
-    final session = ref.read(sessionProvider);
-    if (session.userId == null || session.token == null) return;
-    final api = ref.read(apiClientProvider);
-    try {
-      final results = await Future.wait([
-        api.fetchTodayTasksForChild(session.userId!),
-        api.fetchSubmissionHistory(childId: session.userId!),
-      ]);
-      final tasks = results[0] as List<dynamic>;
-      final submissions = results[1] as List<dynamic>;
-
-      // Finde heute eingereichte Tasks
-      final today = DateTime.now();
-      final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-      final submittedToday = submissions
-          .where((s) => (s['created_at'] as String?)?.startsWith(todayStr) == true)
-          .map((s) => s['task_id'] as int)
-          .toSet();
-
-      setState(() {
-        _tasks = tasks;
-        _submissions = submissions;
-        _submitted.addAll(submittedToday);
-        _loading = false;
-      });
-    } catch (_) {
-      setState(() => _loading = false);
+  String get _title {
+    switch (_index) {
+      case 1:
+        return 'Lernen';
+      case 2:
+        return 'Achievements';
+      case 3:
+        return 'Mein TAN-Budget';
+      default:
+        return 'Heute';
     }
   }
 
-  Future<void> _submitTask(int taskId) async {
-    final session = ref.read(sessionProvider);
-    if (session.token == null) return;
-    setState(() => _submitting.add(taskId));
-    final api = ref.read(apiClientProvider);
-    try {
-      await api.submitTask(taskId: taskId, comment: 'Erledigt');
-      if (!mounted) return;
-      setState(() => _submitted.add(taskId));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Aufgabe eingereicht')),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Einreichen fehlgeschlagen')),
-      );
-    } finally {
-      setState(() => _submitting.remove(taskId));
-    }
-  }
-
-  String _getSubmissionStatus(int taskId) {
-    final submission = _submissions.firstWhere(
-      (s) => s['task_id'] == taskId,
-      orElse: () => null,
-    );
-    if (submission == null) return 'pending';
-    return submission['status'] as String? ?? 'pending';
-  }
-
-  Widget _buildTaskButton(Map<String, dynamic> task) {
-    final taskId = task['id'] as int;
-    final isSubmitting = _submitting.contains(taskId);
-    final isSubmitted = _submitted.contains(taskId);
-    final status = _getSubmissionStatus(taskId);
-
-    if (isSubmitting) {
-      return const SizedBox(
-        height: 36,
-        width: 100,
-        child: Center(child: SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))),
-      );
-    }
-
-    if (isSubmitted || status == 'pending' && _submitted.contains(taskId)) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.orange.shade100,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Text('Eingereicht', style: TextStyle(color: Colors.orange)),
-      );
-    }
-
-    if (status == 'approved') {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.green.shade100,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Text('Bestätigt ✓', style: TextStyle(color: Colors.green)),
-      );
-    }
-
-    if (status == 'retry') {
-      return ElevatedButton(
-        onPressed: () => _submitTask(taskId),
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade100),
-        child: const Text('Nochmal'),
-      );
-    }
-
-    return ElevatedButton(
-      onPressed: () => _submitTask(taskId),
-      child: const Text('Erledigt'),
-    );
+  void _logout() {
+    ref.read(sessionProvider.notifier).clear();
+    context.go('/role');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Heute'),
+        title: Text(_title),
         actions: [
           IconButton(
-            icon: const Icon(Icons.card_giftcard),
-            tooltip: 'Meine TANs',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ChildLedgerScreen()),
+            onPressed: () => ref.read(themeProvider.notifier).toggleTheme(),
+            icon: Icon(
+              ref.watch(themeProvider) == ThemeMode.dark
+                  ? Icons.light_mode
+                  : Icons.dark_mode,
             ),
+            tooltip: 'Theme wechseln',
+          ),
+          IconButton(
+            onPressed: _logout,
+            icon: const Icon(Icons.logout),
+            tooltip: 'Abmelden',
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _fetch,
-              child: ListView.builder(
-                itemCount: _tasks.length,
-                itemBuilder: (context, index) {
-                  final task = _tasks[index];
-                  return Card(
-                    child: ListTile(
-                      title: Text(task['title'] ?? 'Aufgabe'),
-                      subtitle: Text('${task['tan_reward'] ?? 0} Min • ${task['target_device'] ?? ''}'),
-                      trailing: _buildTaskButton(task),
-                    ),
-                  );
-                },
-              ),
-            ),
-    );
-  }
-}
-
-class ChildLedgerScreen extends ConsumerStatefulWidget {
-  const ChildLedgerScreen({super.key});
-
-  @override
-  ConsumerState<ChildLedgerScreen> createState() => _ChildLedgerScreenState();
-}
-
-class _ChildLedgerScreenState extends ConsumerState<ChildLedgerScreen> {
-  List<dynamic> _ledger = [];
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetch();
-  }
-
-  Future<void> _fetch() async {
-    final api = ref.read(apiClientProvider);
-    try {
-      final ledger = await api.fetchMyLedger();
-      setState(() {
-        _ledger = ledger;
-        _loading = false;
-      });
-    } catch (_) {
-      setState(() => _loading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Meine TANs')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _ledger.isEmpty
-              ? const Center(child: Text('Noch keine TANs verdient'))
-              : RefreshIndicator(
-                  onRefresh: _fetch,
-                  child: ListView.builder(
-                    itemCount: _ledger.length,
-                    itemBuilder: (context, index) {
-                      final entry = _ledger[index];
-                      return Card(
-                        child: ListTile(
-                          leading: Icon(
-                            entry['target_device'] == 'tablet'
-                                ? Icons.tablet
-                                : entry['target_device'] == 'pc'
-                                    ? Icons.computer
-                                    : Icons.phone_android,
-                            size: 32,
-                          ),
-                          title: Text('${entry['total_minutes'] ?? 0} Minuten'),
-                          subtitle: Text('${entry['target_device'] ?? ''} • ${entry['count'] ?? 0} Aufgaben'),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+      body: IndexedStack(
+        index: _index,
+        children: _pages,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _index,
+        onTap: (value) => setState(() => _index = value),
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.task_alt), label: 'Aufgaben'),
+          BottomNavigationBarItem(icon: Icon(Icons.school), label: 'Lernen'),
+          BottomNavigationBarItem(icon: Icon(Icons.emoji_events), label: 'Badges'),
+          BottomNavigationBarItem(icon: Icon(Icons.confirmation_number), label: 'TANs'),
+        ],
+      ),
     );
   }
 }

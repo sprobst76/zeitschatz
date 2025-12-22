@@ -5,10 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screens/child_home_screen.dart';
-import '../screens/ledger_aggregate_screen.dart';
-import '../screens/parent_history_screen.dart';
-import '../screens/parent_inbox_screen.dart';
+import '../screens/child_task_detail_screen.dart';
+import '../screens/parent_home_screen.dart';
 import '../screens/role_select_screen.dart';
+import '../screens/tan_pool_screen.dart';
+import '../screens/task_editor_screen.dart';
 import '../state/app_state.dart';
 
 class RouterRefreshStream extends ChangeNotifier {
@@ -39,16 +40,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ChildHomeScreen(),
       ),
       GoRoute(
+        path: '/child/task',
+        builder: (context, state) {
+          final task = state.extra;
+          if (task is! Map<String, dynamic>) {
+            return const Scaffold(body: Center(child: Text('Keine Aufgabe gefunden')));
+          }
+          return ChildTaskDetailScreen(task: task);
+        },
+      ),
+      GoRoute(
         path: '/parent',
-        builder: (context, state) => const ParentInboxScreen(),
+        builder: (context, state) => const ParentHomeScreen(),
       ),
       GoRoute(
-        path: '/parent/history',
-        builder: (context, state) => const ParentHistoryScreen(),
+        path: '/parent/task',
+        builder: (context, state) {
+          final task = state.extra;
+          if (task != null && task is! Map<String, dynamic>) {
+            return const Scaffold(body: Center(child: Text('Keine Aufgabe gefunden')));
+          }
+          return TaskEditorScreen(task: task as Map<String, dynamic>?);
+        },
       ),
       GoRoute(
-        path: '/parent/ledger-aggregate',
-        builder: (context, state) => const LedgerAggregateScreen(),
+        path: '/parent/tan-pool',
+        builder: (context, state) => const TanPoolScreen(),
       ),
     ],
     redirect: (context, state) {
