@@ -31,6 +31,7 @@ from app.schemas.auth import (
 )
 from app.schemas.user import UserRead
 from app.core.rate_limit import limiter
+from app.core.config import get_settings
 from app.services.email import get_email_service
 
 router = APIRouter()
@@ -53,15 +54,19 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
             detail="Ein Konto mit dieser Email existiert bereits",
         )
 
+    # Check if we should auto-verify in dev mode
+    settings = get_settings()
+    auto_verify = settings.dev_bypass_auth
+
     # Create user with verification token
-    verification_token = generate_token()
+    verification_token = generate_token() if not auto_verify else None
     user = User(
         name=payload.name,
         email=payload.email,
         password_hash=hash_password(payload.password),
         pin_hash="",  # Empty for email-only parents (SQLite NOT NULL constraint)
         role="parent",
-        email_verified=False,
+        email_verified=auto_verify,  # Auto-verify in dev mode
         verification_token=verification_token,
         is_active=True,
     )
@@ -69,18 +74,23 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
     db.commit()
     db.refresh(user)
 
-    # Send verification email
-    email_service = get_email_service()
-    email_service.send_verification_email(
-        to=payload.email,
-        name=payload.name,
-        token=verification_token,
-    )
-
-    return MessageResponse(
-        message="Registrierung erfolgreich. Bitte bestätige deine Email-Adresse.",
-        success=True,
-    )
+    # Send verification email (skip in dev mode)
+    if not auto_verify:
+        email_service = get_email_service()
+        email_service.send_verification_email(
+            to=payload.email,
+            name=payload.name,
+            token=verification_token,
+        )
+        return MessageResponse(
+            message="Registrierung erfolgreich. Bitte bestätige deine Email-Adresse.",
+            success=True,
+        )
+    else:
+        return MessageResponse(
+            message="Registrierung erfolgreich. (Dev-Mode: Email automatisch verifiziert)",
+            success=True,
+        )
 
 
 @router.post("/verify-email", response_model=TokenResponse)
