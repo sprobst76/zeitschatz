@@ -1,5 +1,12 @@
 # Changelog – ZeitSchatz
 
+## 2025-12-23
+
+### Bugfixes
+- **Registration**: Fix 500 error bei Eltern-Registrierung - `pin_hash` auf leeren String setzen für SQLite NOT NULL constraint
+
+---
+
 ## 2025-12-22 (Multi-Family + Provider)
 
 ### Multi-Family Support (Backend)

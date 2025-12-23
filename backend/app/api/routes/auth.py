@@ -59,6 +59,7 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
         name=payload.name,
         email=payload.email,
         password_hash=hash_password(payload.password),
+        pin_hash="",  # Empty for email-only parents (SQLite NOT NULL constraint)
         role="parent",
         email_verified=False,
         verification_token=verification_token,
