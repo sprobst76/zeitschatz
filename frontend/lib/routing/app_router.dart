@@ -11,6 +11,10 @@ import '../screens/onboarding/login_screen.dart';
 import '../screens/onboarding/register_screen.dart';
 import '../screens/onboarding/family_setup_screen.dart';
 import '../screens/onboarding/child_login_screen.dart';
+import '../screens/family/family_settings_screen.dart';
+import '../screens/family/family_members_screen.dart';
+import '../screens/family/device_providers_screen.dart';
+import '../screens/family/add_child_screen.dart';
 import '../screens/parent_home_screen.dart';
 import '../screens/role_select_screen.dart';
 import '../screens/tan_pool_screen.dart';
@@ -95,6 +99,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/parent/tan-pool',
         builder: (context, state) => const TanPoolScreen(),
+      ),
+      // Family management routes
+      GoRoute(
+        path: '/family/settings',
+        builder: (context, state) => const FamilySettingsScreen(),
+      ),
+      GoRoute(
+        path: '/family/members',
+        builder: (context, state) => const FamilyMembersScreen(),
+      ),
+      GoRoute(
+        path: '/family/devices',
+        builder: (context, state) => const DeviceProvidersScreen(),
+      ),
+      GoRoute(
+        path: '/family/add-child',
+        builder: (context, state) => const AddChildScreen(),
       ),
     ],
     redirect: (context, state) {
