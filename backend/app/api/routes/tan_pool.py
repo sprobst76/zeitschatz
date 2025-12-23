@@ -1,12 +1,13 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_db_session
-from app.core.security import require_role
+from app.core.dependencies import get_db_session, verify_family_access
+from app.core.security import get_current_user, require_role
+from app.models.user import User
 from app.models.tan_pool import TanPool
 from app.schemas.tan_pool import (
     TanPoolEntry,
@@ -32,12 +33,21 @@ def normalize_device_name(device: str) -> str:
 
 
 @router.post("/import", response_model=TanPoolImportResponse, dependencies=[Depends(require_role("parent"))])
-def import_tans(request: TanPoolImportRequest, db: Session = Depends(get_db_session)):
+def import_tans(
+    request: TanPoolImportRequest,
+    family_id: int = Query(..., description="Familie für diese TANs"),
+    db: Session = Depends(get_db_session),
+    user: User = Depends(get_current_user),
+):
     """
     Import TANs from text format.
     Expected format per line: TAN;Minutes;Created;Device
     First line can be a header and will be skipped if it contains 'TAN' or 'Tan'.
     """
+    # Verify family access
+    if not verify_family_access(db, user.id, family_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Zugriff auf diese Familie")
+
     lines = request.raw_text.strip().split("\n")
     imported = 0
     skipped = 0
@@ -68,9 +78,9 @@ def import_tans(request: TanPoolImportRequest, db: Session = Depends(get_db_sess
         device_raw = parts[3].strip().rstrip("#")  # Remove trailing #
         target_device = normalize_device_name(device_raw)
 
-        # Check for duplicate
+        # Check for duplicate within this family
         existing = db.execute(
-            select(TanPool).where(TanPool.tan_code == tan_code)
+            select(TanPool).where(TanPool.tan_code == tan_code, TanPool.family_id == family_id)
         ).scalar_one_or_none()
 
         if existing:
@@ -81,6 +91,7 @@ def import_tans(request: TanPoolImportRequest, db: Session = Depends(get_db_sess
             tan_code=tan_code,
             minutes=minutes,
             target_device=target_device,
+            family_id=family_id,
             created_at=datetime.utcnow(),
             used=False,
         )
@@ -101,12 +112,18 @@ def import_tans(request: TanPoolImportRequest, db: Session = Depends(get_db_sess
 
 @router.get("/", response_model=list[TanPoolEntry], dependencies=[Depends(require_role("parent"))])
 def list_tans(
+    family_id: int = Query(..., description="Familie"),
     available_only: bool = False,
     target_device: str | None = None,
     db: Session = Depends(get_db_session),
+    user: User = Depends(get_current_user),
 ):
     """List all TANs in the pool, optionally filtered."""
-    stmt = select(TanPool).order_by(TanPool.created_at.desc())
+    # Verify family access
+    if not verify_family_access(db, user.id, family_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Zugriff auf diese Familie")
+
+    stmt = select(TanPool).where(TanPool.family_id == family_id).order_by(TanPool.created_at.desc())
 
     if available_only:
         stmt = stmt.where(TanPool.used.is_(False))
@@ -118,18 +135,28 @@ def list_tans(
 
 
 @router.get("/stats", response_model=TanPoolStats, dependencies=[Depends(require_role("parent"))])
-def get_stats(db: Session = Depends(get_db_session)):
+def get_stats(
+    family_id: int = Query(..., description="Familie"),
+    db: Session = Depends(get_db_session),
+    user: User = Depends(get_current_user),
+):
     """Get statistics about the TAN pool."""
-    total = db.execute(select(func.count(TanPool.id))).scalar() or 0
+    # Verify family access
+    if not verify_family_access(db, user.id, family_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Zugriff auf diese Familie")
+
+    total = db.execute(
+        select(func.count(TanPool.id)).where(TanPool.family_id == family_id)
+    ).scalar() or 0
     available = db.execute(
-        select(func.count(TanPool.id)).where(TanPool.used.is_(False))
+        select(func.count(TanPool.id)).where(TanPool.used.is_(False), TanPool.family_id == family_id)
     ).scalar() or 0
     used = total - available
 
     # Count available by device
     device_counts = db.execute(
         select(TanPool.target_device, func.count(TanPool.id))
-        .where(TanPool.used.is_(False))
+        .where(TanPool.used.is_(False), TanPool.family_id == family_id)
         .group_by(TanPool.target_device)
     ).all()
 
@@ -144,11 +171,21 @@ def get_stats(db: Session = Depends(get_db_session)):
 
 
 @router.get("/next", response_model=TanPoolEntry | None, dependencies=[Depends(require_role("parent"))])
-def get_next_available(target_device: str, db: Session = Depends(get_db_session)):
+def get_next_available(
+    target_device: str,
+    family_id: int = Query(..., description="Familie"),
+    db: Session = Depends(get_db_session),
+    user: User = Depends(get_current_user),
+):
     """Get the next available TAN for a specific device."""
+    # Verify family access
+    if not verify_family_access(db, user.id, family_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Zugriff auf diese Familie")
+
     stmt = (
         select(TanPool)
         .where(TanPool.used.is_(False))
+        .where(TanPool.family_id == family_id)
         .where(TanPool.target_device == target_device.lower())
         .order_by(TanPool.created_at.asc())
         .limit(1)
@@ -157,11 +194,20 @@ def get_next_available(target_device: str, db: Session = Depends(get_db_session)
 
 
 @router.post("/{tan_id}/use", response_model=TanPoolEntry, dependencies=[Depends(require_role("parent"))])
-def mark_used(tan_id: int, child_id: int | None = None, db: Session = Depends(get_db_session)):
+def mark_used(
+    tan_id: int,
+    child_id: int | None = None,
+    db: Session = Depends(get_db_session),
+    user: User = Depends(get_current_user),
+):
     """Mark a TAN as used."""
     entry = db.get(TanPool, tan_id)
     if not entry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TAN nicht gefunden")
+
+    # Verify family access
+    if entry.family_id and not verify_family_access(db, user.id, entry.family_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Zugriff auf diese TAN")
 
     if entry.used:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="TAN bereits verwendet")
@@ -175,11 +221,19 @@ def mark_used(tan_id: int, child_id: int | None = None, db: Session = Depends(ge
 
 
 @router.delete("/{tan_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_role("parent"))])
-def delete_tan(tan_id: int, db: Session = Depends(get_db_session)):
+def delete_tan(
+    tan_id: int,
+    db: Session = Depends(get_db_session),
+    user: User = Depends(get_current_user),
+):
     """Delete a TAN from the pool."""
     entry = db.get(TanPool, tan_id)
     if not entry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TAN nicht gefunden")
+
+    # Verify family access
+    if entry.family_id and not verify_family_access(db, user.id, entry.family_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Zugriff auf diese TAN")
 
     db.delete(entry)
     db.commit()

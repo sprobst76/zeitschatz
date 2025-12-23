@@ -39,6 +39,17 @@
 - App-URLs: `APP_URL`, `FRONTEND_URL`
 - `INVITE_CODE_EXPIRY_DAYS` (default: 7)
 
+### Family-Scoped Endpoints (Phase 5)
+Alle bestehenden Endpoints wurden auf Multi-Family umgestellt:
+- **Tasks**: `family_id` Filter, Zugriffsprüfung, automatische Zuordnung bei Erstellung
+- **Submissions**: `family_id` Filter bei create/list/approve/retry
+- **TAN-Pool**: `family_id` Pflichtparameter, Import/List/Stats/Next alle family-scoped
+- **Ledger**: `family_id` Filter bei my/aggregate/list/payout/mark-paid
+
+Neue Helper in `dependencies.py`:
+- `verify_family_access(db, user_id, family_id)` - Prüft Family-Mitgliedschaft
+- `get_user_family_ids(db, user_id)` - Gibt alle Family-IDs des Users zurück
+
 ---
 
 ## 2025-12-22 (Dark Mode + Deploy)

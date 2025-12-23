@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_db_session
+from app.core.dependencies import get_db_session, get_user_family_ids, verify_family_access
 from app.core.security import get_current_user, require_role
 from app.models.ledger import TanLedger
 from app.models.submission import Submission
@@ -31,12 +31,17 @@ def create_submission(
     if not task or not task.is_active:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not available")
 
+    # Verify child has access to task's family
+    if task.family_id and not verify_family_access(db, user.id, task.family_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Zugriff auf diese Aufgabe")
+
     # Check if task is auto-approve
     is_auto_approve = getattr(task, 'auto_approve', False)
 
     submission = Submission(
         task_id=payload.task_id,
         child_id=user.id,
+        family_id=task.family_id,
         status="approved" if is_auto_approve else "pending",
         selected_device=payload.selected_device,
         comment=payload.comment,
@@ -52,6 +57,7 @@ def create_submission(
         # Auto-approve: create TAN ledger entry
         ledger_entry = TanLedger(
             child_id=submission.child_id,
+            family_id=task.family_id,
             submission_id=submission.id,
             minutes=task.tan_reward,
             target_device=submission.selected_device,
@@ -99,11 +105,25 @@ def create_submission(
 
 @router.get("/history", response_model=List[SubmissionRead])
 def list_history(
+    family_id: int | None = Query(default=None, description="Filter auf Familie"),
     child_id: int | None = Query(default=None, description="Filter auf Kind-ID (parent-only)"),
     db: Session = Depends(get_db_session),
     user=Depends(get_current_user),
 ):
     stmt = select(Submission).order_by(Submission.created_at.desc())
+
+    # Family filtering
+    if family_id is not None:
+        if not verify_family_access(db, user.id, family_id):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Zugriff auf diese Familie")
+        stmt = stmt.where(Submission.family_id == family_id)
+    else:
+        user_family_ids = get_user_family_ids(db, user.id)
+        if user_family_ids:
+            stmt = stmt.where(Submission.family_id.in_(user_family_ids))
+        else:
+            stmt = stmt.where(Submission.family_id.is_(None))
+
     if user.role == "child":
         stmt = stmt.where(Submission.child_id == user.id)
     else:
@@ -135,19 +155,51 @@ def _extend_submission(sub: Submission, db: Session) -> SubmissionReadExtended:
 
 
 @router.get("/pending", response_model=List[SubmissionReadExtended], dependencies=[Depends(require_role("parent"))])
-def list_pending(db: Session = Depends(get_db_session)):
+def list_pending(
+    family_id: int | None = Query(default=None, description="Filter auf Familie"),
+    db: Session = Depends(get_db_session),
+    user: User = Depends(get_current_user),
+):
     stmt = select(Submission).where(Submission.status == "pending").order_by(Submission.created_at.desc())
+
+    # Family filtering
+    if family_id is not None:
+        if not verify_family_access(db, user.id, family_id):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Zugriff auf diese Familie")
+        stmt = stmt.where(Submission.family_id == family_id)
+    else:
+        user_family_ids = get_user_family_ids(db, user.id)
+        if user_family_ids:
+            stmt = stmt.where(Submission.family_id.in_(user_family_ids))
+        else:
+            stmt = stmt.where(Submission.family_id.is_(None))
+
     submissions = db.execute(stmt).scalars().all()
     return [_extend_submission(sub, db) for sub in submissions]
 
 
 @router.get("/completed", response_model=List[SubmissionReadExtended], dependencies=[Depends(require_role("parent"))])
 def list_completed(
+    family_id: int | None = Query(default=None, description="Filter auf Familie"),
     child_id: int | None = Query(default=None, description="Filter by child ID"),
     limit: int = Query(default=50, ge=1, le=200, description="Max results"),
     db: Session = Depends(get_db_session),
+    user: User = Depends(get_current_user),
 ):
     stmt = select(Submission).where(Submission.status == "approved").order_by(Submission.updated_at.desc()).limit(limit)
+
+    # Family filtering
+    if family_id is not None:
+        if not verify_family_access(db, user.id, family_id):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Zugriff auf diese Familie")
+        stmt = stmt.where(Submission.family_id == family_id)
+    else:
+        user_family_ids = get_user_family_ids(db, user.id)
+        if user_family_ids:
+            stmt = stmt.where(Submission.family_id.in_(user_family_ids))
+        else:
+            stmt = stmt.where(Submission.family_id.is_(None))
+
     if child_id is not None:
         stmt = stmt.where(Submission.child_id == child_id)
     submissions = db.execute(stmt).scalars().all()
@@ -159,11 +211,17 @@ def approve_submission(
     submission_id: int,
     decision: SubmissionDecision,
     db: Session = Depends(get_db_session),
+    user: User = Depends(get_current_user),
     background_tasks: BackgroundTasks = None,
 ):
     submission = db.get(Submission, submission_id)
     if not submission:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+
+    # Verify family access
+    if submission.family_id and not verify_family_access(db, user.id, submission.family_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Zugriff auf diese Einreichung")
+
     task = db.get(Task, submission.task_id)
     minutes = decision.minutes or (task.tan_reward if task else 0)
     # Use selected_device from submission (child's choice)
@@ -173,6 +231,7 @@ def approve_submission(
     submission.updated_at = datetime.utcnow()
     ledger_entry = TanLedger(
         child_id=submission.child_id,
+        family_id=submission.family_id,
         submission_id=submission.id,
         minutes=minutes,
         target_device=target_device,
@@ -221,10 +280,16 @@ def retry_submission(
     submission_id: int,
     decision: SubmissionDecision,
     db: Session = Depends(get_db_session),
+    user: User = Depends(get_current_user),
 ):
     submission = db.get(Submission, submission_id)
     if not submission:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+
+    # Verify family access
+    if submission.family_id and not verify_family_access(db, user.id, submission.family_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Zugriff auf diese Einreichung")
+
     submission.status = "retry"
     submission.comment = decision.comment or "Bitte noch einmal erledigen."
     submission.updated_at = datetime.utcnow()
