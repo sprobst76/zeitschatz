@@ -73,6 +73,22 @@ Routing:
 
 SessionState erweitert um: `familyId`, `familyName`, `userName`, `email`
 
+### Family Management UI (Phase 7)
+Neue Screens zur Familienverwaltung:
+- **FamilySettingsScreen**: Übersicht mit Name, Einladungscode, Links zu Members/Devices
+- **FamilyMembersScreen**: Mitglieder anzeigen und entfernen
+- **DeviceProvidersScreen**: Provider pro Gerät konfigurieren (Kisi/Family Link/Manual)
+- **AddChildScreen**: Kind mit Name und PIN hinzufügen
+
+ParentHomeScreen:
+- Neuer Button für Familie verwalten in der AppBar
+- Logout führt jetzt zu `/welcome` statt `/role`
+
+### Provider-Aware UI (Phase 8)
+- **FamilyState**: Neuer State-Provider für Device-Provider-Konfiguration
+- **Dynamische Navigation**: TAN-Tab nur sichtbar wenn Familie Kisi für mindestens ein Gerät nutzt
+- Automatisches Laden der Provider-Config beim Start
+
 ---
 
 ## 2025-12-22 (Dark Mode + Deploy)
