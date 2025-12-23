@@ -51,12 +51,74 @@ class ApiClient {
     }
   }
 
+  // Legacy PIN login (will be deprecated)
   Future<TokenPair> login({required int userId, required String pin}) async {
     final res = await _dio.post('/auth/login', data: {'user_id': userId, 'pin': pin});
     return TokenPair(
       accessToken: res.data['access_token'] as String,
       refreshToken: res.data['refresh_token'] as String?,
     );
+  }
+
+  // New Auth Methods
+  Future<void> register({
+    required String email,
+    required String password,
+    required String name,
+  }) async {
+    await _dio.post('/auth/register', data: {
+      'email': email,
+      'password': password,
+      'name': name,
+    });
+  }
+
+  Future<void> verifyEmail(String token) async {
+    await _dio.post('/auth/verify-email', data: {'token': token});
+  }
+
+  Future<TokenPair> loginWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    final res = await _dio.post('/auth/login/email', data: {
+      'email': email,
+      'password': password,
+    });
+    return TokenPair(
+      accessToken: res.data['access_token'] as String,
+      refreshToken: res.data['refresh_token'] as String?,
+    );
+  }
+
+  Future<TokenPair> loginWithPin({
+    required String familyCode,
+    required int userId,
+    required String pin,
+  }) async {
+    final res = await _dio.post('/auth/login/pin', data: {
+      'family_code': familyCode,
+      'user_id': userId,
+      'pin': pin,
+    });
+    return TokenPair(
+      accessToken: res.data['access_token'] as String,
+      refreshToken: res.data['refresh_token'] as String?,
+    );
+  }
+
+  Future<void> forgotPassword(String email) async {
+    await _dio.post('/auth/forgot-password', data: {'email': email});
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    await _dio.post('/auth/reset-password', data: {
+      'token': token,
+      'new_password': newPassword,
+    });
   }
 
   Future<TokenPair> refresh({required String refreshToken}) async {
@@ -389,5 +451,120 @@ class ApiClient {
 
     final res = await _dio.post('/tasks', data: taskData);
     return res.data as Map<String, dynamic>;
+  }
+
+  // Family Management
+  Future<Map<String, dynamic>> createFamily(String name) async {
+    final res = await _dio.post('/families', data: {'name': name});
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<List<dynamic>> fetchFamilies() async {
+    final res = await _dio.get('/families');
+    return res.data as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> fetchFamily(int familyId) async {
+    final res = await _dio.get('/families/$familyId');
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateFamily(int familyId, Map<String, dynamic> data) async {
+    final res = await _dio.patch('/families/$familyId', data: data);
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<String> generateInviteCode(int familyId) async {
+    final res = await _dio.post('/families/$familyId/invite');
+    return res.data['invite_code'] as String;
+  }
+
+  Future<Map<String, dynamic>> joinFamily(String inviteCode) async {
+    final res = await _dio.post('/families/join', data: {'invite_code': inviteCode});
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<void> leaveFamily(int familyId) async {
+    await _dio.delete('/families/$familyId/leave');
+  }
+
+  Future<List<dynamic>> fetchFamilyMembers(int familyId) async {
+    final res = await _dio.get('/families/$familyId/members');
+    return res.data as List<dynamic>;
+  }
+
+  Future<void> removeFamilyMember(int familyId, int userId) async {
+    await _dio.delete('/families/$familyId/members/$userId');
+  }
+
+  Future<Map<String, dynamic>> addChildToFamily(int familyId, {
+    required String name,
+    required String pin,
+  }) async {
+    final res = await _dio.post('/families/$familyId/children', data: {
+      'name': name,
+      'pin': pin,
+    });
+    return res.data as Map<String, dynamic>;
+  }
+
+  // Device Providers
+  Future<List<dynamic>> fetchDeviceProviders(int familyId) async {
+    final res = await _dio.get('/families/$familyId/devices');
+    return res.data as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> setDeviceProvider(
+    int familyId,
+    String deviceType,
+    String providerType, {
+    Map<String, dynamic>? settings,
+  }) async {
+    final res = await _dio.patch('/families/$familyId/devices/$deviceType', data: {
+      'provider_type': providerType,
+      if (settings != null) 'provider_settings': settings,
+    });
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<List<dynamic>> fetchAvailableProviders() async {
+    final res = await _dio.get('/families/providers/available');
+    return res.data as List<dynamic>;
+  }
+
+  // Family-scoped endpoints (add family_id parameter)
+  Future<List<dynamic>> fetchTasksForFamily(int familyId, {int? childId}) async {
+    final params = <String, dynamic>{'family_id': familyId};
+    if (childId != null) params['child_id'] = childId;
+    final res = await _dio.get('/tasks', queryParameters: params);
+    return res.data as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> createTaskInFamily(int familyId, Map<String, dynamic> payload) async {
+    final res = await _dio.post('/tasks', queryParameters: {'family_id': familyId}, data: payload);
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> fetchTanPoolStatsForFamily(int familyId) async {
+    final res = await _dio.get('/tan-pool/stats', queryParameters: {'family_id': familyId});
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<List<dynamic>> fetchTanPoolForFamily(int familyId, {bool availableOnly = false, String? targetDevice}) async {
+    final params = <String, dynamic>{'family_id': familyId};
+    if (availableOnly) params['available_only'] = true;
+    if (targetDevice != null) params['target_device'] = targetDevice;
+    final res = await _dio.get('/tan-pool/', queryParameters: params);
+    return res.data as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> importTansForFamily(int familyId, String rawText) async {
+    final res = await _dio.post('/tan-pool/import', queryParameters: {'family_id': familyId}, data: {'raw_text': rawText});
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>?> getNextAvailableTanForFamily(int familyId, String targetDevice) async {
+    final res = await _dio.get('/tan-pool/next', queryParameters: {'family_id': familyId, 'target_device': targetDevice});
+    return res.data as Map<String, dynamic>?;
   }
 }

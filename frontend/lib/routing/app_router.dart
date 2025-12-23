@@ -6,6 +6,11 @@ import 'package:go_router/go_router.dart';
 
 import '../screens/child_home_screen.dart';
 import '../screens/child_task_detail_screen.dart';
+import '../screens/onboarding/welcome_screen.dart';
+import '../screens/onboarding/login_screen.dart';
+import '../screens/onboarding/register_screen.dart';
+import '../screens/onboarding/family_setup_screen.dart';
+import '../screens/onboarding/child_login_screen.dart';
 import '../screens/parent_home_screen.dart';
 import '../screens/role_select_screen.dart';
 import '../screens/tan_pool_screen.dart';
@@ -28,13 +33,36 @@ class RouterRefreshStream extends ChangeNotifier {
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/role',
+    initialLocation: '/welcome',
     refreshListenable: RouterRefreshStream(ref.watch(sessionProvider.notifier).stream),
     routes: [
+      // Onboarding routes
+      GoRoute(
+        path: '/welcome',
+        builder: (context, state) => const WelcomeScreen(),
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/family-setup',
+        builder: (context, state) => const FamilySetupScreen(),
+      ),
+      GoRoute(
+        path: '/child-login',
+        builder: (context, state) => const ChildLoginScreen(),
+      ),
+      // Legacy role select (for backwards compatibility)
       GoRoute(
         path: '/role',
         builder: (context, state) => const RoleSelectScreen(),
       ),
+      // Child routes
       GoRoute(
         path: '/child',
         builder: (context, state) => const ChildHomeScreen(),
@@ -49,6 +77,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return ChildTaskDetailScreen(task: task);
         },
       ),
+      // Parent routes
       GoRoute(
         path: '/parent',
         builder: (context, state) => const ParentHomeScreen(),
@@ -70,10 +99,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
     redirect: (context, state) {
       final session = ref.read(sessionProvider);
-      final isAuth = session.token != null;
-      if (!isAuth && state.matchedLocation != '/role') {
-        return '/role';
+      final isAuth = session.isAuthenticated;
+      final loc = state.matchedLocation;
+
+      // Public routes that don't require auth
+      const publicRoutes = ['/welcome', '/login', '/register', '/child-login', '/role'];
+
+      if (!isAuth && !publicRoutes.contains(loc)) {
+        return '/welcome';
       }
+
+      // If authenticated but no family, redirect to family setup (except if already there)
+      if (isAuth && !session.hasFamily && loc != '/family-setup' && session.role == 'parent') {
+        return '/family-setup';
+      }
+
       return null;
     },
   );

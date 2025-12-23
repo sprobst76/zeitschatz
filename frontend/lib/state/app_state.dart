@@ -30,14 +30,44 @@ class SessionState {
   final String? refreshToken;
   final String role; // 'parent' | 'child'
   final int? userId;
-  const SessionState({this.token, this.refreshToken, this.userId, this.role = 'guest'});
+  final int? familyId;
+  final String? familyName;
+  final String? userName;
+  final String? email;
 
-  SessionState copyWith({String? token, String? refreshToken, int? userId, String? role}) {
+  const SessionState({
+    this.token,
+    this.refreshToken,
+    this.userId,
+    this.role = 'guest',
+    this.familyId,
+    this.familyName,
+    this.userName,
+    this.email,
+  });
+
+  bool get isAuthenticated => token != null;
+  bool get hasFamily => familyId != null;
+
+  SessionState copyWith({
+    String? token,
+    String? refreshToken,
+    int? userId,
+    String? role,
+    int? familyId,
+    String? familyName,
+    String? userName,
+    String? email,
+  }) {
     return SessionState(
       token: token ?? this.token,
       refreshToken: refreshToken ?? this.refreshToken,
       userId: userId ?? this.userId,
       role: role ?? this.role,
+      familyId: familyId ?? this.familyId,
+      familyName: familyName ?? this.familyName,
+      userName: userName ?? this.userName,
+      email: email ?? this.email,
     );
   }
 }
@@ -45,12 +75,34 @@ class SessionState {
 class SessionNotifier extends StateNotifier<SessionState> {
   SessionNotifier() : super(const SessionState());
 
-  void setSession({required String token, String? refreshToken, required int userId, required String role}) {
-    state = SessionState(token: token, refreshToken: refreshToken, userId: userId, role: role);
+  void setSession({
+    required String token,
+    String? refreshToken,
+    required int userId,
+    required String role,
+    int? familyId,
+    String? familyName,
+    String? userName,
+    String? email,
+  }) {
+    state = SessionState(
+      token: token,
+      refreshToken: refreshToken,
+      userId: userId,
+      role: role,
+      familyId: familyId,
+      familyName: familyName,
+      userName: userName,
+      email: email,
+    );
   }
 
   void updateTokens({required String token, String? refreshToken}) {
     state = state.copyWith(token: token, refreshToken: refreshToken ?? state.refreshToken);
+  }
+
+  void setFamily({required int familyId, required String familyName}) {
+    state = state.copyWith(familyId: familyId, familyName: familyName);
   }
 
   void clear() {

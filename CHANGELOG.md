@@ -50,6 +50,29 @@ Neue Helper in `dependencies.py`:
 - `verify_family_access(db, user_id, family_id)` - Prüft Family-Mitgliedschaft
 - `get_user_family_ids(db, user_id)` - Gibt alle Family-IDs des Users zurück
 
+### Frontend Onboarding (Phase 6)
+Neue Screens für Multi-Family Onboarding:
+- **WelcomeScreen**: Landing mit Login/Register/Kind-Login
+- **LoginScreen**: Email/Passwort Login für Eltern
+- **RegisterScreen**: Registrierung mit Email-Verifizierung
+- **FamilySetupScreen**: Familie erstellen oder beitreten
+- **ChildLoginScreen**: Familiencode + PIN Login für Kinder
+
+Routing:
+- Initial-Route jetzt `/welcome` statt `/role`
+- Automatische Weiterleitung zu `/family-setup` falls keine Familie
+- Legacy `/role` Route bleibt für Rückwärtskompatibilität
+
+### API Client Erweiterung (Phase 9)
+- `register()`, `loginWithEmail()`, `loginWithPin()`
+- `verifyEmail()`, `forgotPassword()`, `resetPassword()`
+- `createFamily()`, `joinFamily()`, `fetchFamilies()`
+- `addChildToFamily()`, `generateInviteCode()`
+- `fetchDeviceProviders()`, `setDeviceProvider()`
+- Family-scoped Varianten: `fetchTasksForFamily()`, `importTansForFamily()` etc.
+
+SessionState erweitert um: `familyId`, `familyName`, `userName`, `email`
+
 ---
 
 ## 2025-12-22 (Dark Mode + Deploy)
