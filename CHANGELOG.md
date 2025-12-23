@@ -2,8 +2,23 @@
 
 ## 2025-12-23
 
+### Admin Dashboard
+- **Admin UI**: Web-basiertes Admin Dashboard unter `/admin/`
+  - Statistiken (User, Familien, Tasks, Submissions, Minuten)
+  - Benutzerverwaltung (Liste, Verifizieren, Aktivieren/Deaktivieren)
+  - Aktivitaeten-Log (Registrierungen, Submissions)
+- **Admin API**:
+  - `GET /admin/users` - Alle User mit Status
+  - `POST /admin/users/{id}/verify` - Manuell verifizieren
+  - `POST /admin/users/{id}/toggle-active` - User aktivieren/deaktivieren
+  - `GET /admin/stats` - System-Statistiken
+  - `GET /admin/logs` - Aktivitaeten-Log
+
+### Dev-Mode Verbesserungen
+- **Auto-Verify**: Bei `DEV_BYPASS_AUTH=true` werden neue User automatisch verifiziert (kein Email-Check)
+
 ### Bugfixes
-- **Registration**: Fix 500 error bei Eltern-Registrierung - `pin_hash` auf leeren String setzen für SQLite NOT NULL constraint
+- **Registration**: Fix 500 error bei Eltern-Registrierung - `pin_hash` auf leeren String setzen fuer SQLite NOT NULL constraint
 
 ---
 

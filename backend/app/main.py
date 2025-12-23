@@ -18,6 +18,7 @@ from app.api.routes.learning import router as learning_router
 from app.api.routes.achievements import router as achievements_router
 from app.api.routes.templates import router as templates_router
 from app.api.routes.families import router as families_router
+from app.api.routes.admin import router as admin_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.session import SessionLocal
 from app.jobs.retention import clean_expired_photos
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     app.include_router(achievements_router, prefix="/achievements", tags=["achievements"])
     app.include_router(templates_router, prefix="/templates", tags=["templates"])
     app.include_router(families_router, prefix="/families", tags=["families"])
+    app.include_router(admin_router, prefix="/admin", tags=["admin"])
 
     # CORS for web/desktop
     app.add_middleware(
