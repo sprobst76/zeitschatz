@@ -2,15 +2,35 @@
 
 ## 2025-12-23
 
-### Admin Dashboard
-- **Admin UI**: Web-basiertes Admin Dashboard unter `/admin/`
-  - Statistiken (User, Familien, Tasks, Submissions, Minuten)
-  - Benutzerverwaltung (Liste, Verifizieren, Aktivieren/Deaktivieren)
-  - Aktivitaeten-Log (Registrierungen, Submissions)
+### Admin Dashboard (Erweitert)
+- **Admin UI**: Umfangreiches Web-basiertes Admin Dashboard unter `/admin/`
+  - **Dashboard**: Statistiken (User, Familien, Tasks, Submissions, verdiente Minuten)
+  - **Benutzerverwaltung**: Suche, Filter nach Rolle/Familie, Bearbeiten (Name, Email, Rolle), Passwort aendern, Verifizieren, Aktivieren/Deaktivieren
+  - **Familienverwaltung**: Liste aller Familien mit Mitgliedern, neue Familie erstellen, Einladungscode regenerieren, Mitglieder hinzufuegen/entfernen
+  - **Task-Verwaltung**: Alle Tasks mit Familienfilter, Aktivieren/Deaktivieren
+  - **Submissions**: Alle Einreichungen mit Statusfilter (pending/approved/rejected/retry)
+  - **TAN-Pool**: TANs einsehen, neue TANs hinzufuegen, unbenutzte loeschen, Filter nach Familie/Status
+  - **Aktivitaeten-Log**: Registrierungen, Submissions
+  - **Einstellungen**: Eigenes Admin-Passwort aendern
 - **Admin API**:
-  - `GET /admin/users` - Alle User mit Status
+  - `GET /admin/users` - Alle User mit Suche, Rollen- und Familienfilter
+  - `GET /admin/users/{id}` - Einzelner User mit Details
+  - `PATCH /admin/users/{id}` - User bearbeiten (Name, Email, Rolle)
   - `POST /admin/users/{id}/verify` - Manuell verifizieren
   - `POST /admin/users/{id}/toggle-active` - User aktivieren/deaktivieren
+  - `POST /admin/users/{id}/set-password` - Passwort fuer User setzen
+  - `POST /admin/change-password` - Eigenes Admin-Passwort aendern
+  - `GET /admin/families` - Alle Familien mit Mitgliedern
+  - `POST /admin/families` - Neue Familie erstellen
+  - `POST /admin/families/{id}/members` - Mitglied hinzufuegen
+  - `DELETE /admin/families/{id}/members/{uid}` - Mitglied entfernen
+  - `POST /admin/families/{id}/regenerate-code` - Neuen Einladungscode generieren
+  - `GET /admin/tasks` - Alle Tasks mit Familienfilter
+  - `POST /admin/tasks/{id}/toggle-active` - Task aktivieren/deaktivieren
+  - `GET /admin/submissions` - Alle Submissions mit Statusfilter
+  - `GET /admin/tan-pool` - TAN-Pool mit Familien- und Statusfilter
+  - `POST /admin/tan-pool` - Neuen TAN hinzufuegen
+  - `DELETE /admin/tan-pool/{id}` - Unbenutzten TAN loeschen
   - `GET /admin/stats` - System-Statistiken
   - `GET /admin/logs` - Aktivitaeten-Log
 
