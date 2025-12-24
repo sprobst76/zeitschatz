@@ -66,7 +66,7 @@ def require_family_admin(db: Session, family_id: int, user: User) -> FamilyMembe
     return membership
 
 
-@router.post("/", response_model=FamilyRead)
+@router.post("", response_model=FamilyRead)
 def create_family(
     payload: FamilyCreate,
     db: Session = Depends(get_db_session),
@@ -124,7 +124,7 @@ def create_family(
     )
 
 
-@router.get("/", response_model=list[FamilyRead])
+@router.get("", response_model=list[FamilyRead])
 def list_families(
     db: Session = Depends(get_db_session),
     user: User = Depends(get_current_user),
