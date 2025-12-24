@@ -66,14 +66,14 @@ class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
       final api = ref.read(apiClientProvider);
       final tokens = await api.loginWithPin(
         familyCode: _familyCodeController.text.trim().toUpperCase(),
-        userId: _selectedChildId ?? 0,
         pin: _pinController.text,
       );
 
+      // Set session first so apiClientProvider gets updated
       ref.read(sessionProvider.notifier).setSession(
         token: tokens.accessToken,
         refreshToken: tokens.refreshToken,
-        userId: _selectedChildId ?? 0,
+        userId: 0, // Will be set from JWT claims
         role: 'child',
       );
 

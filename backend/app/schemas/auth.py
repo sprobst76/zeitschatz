@@ -15,9 +15,13 @@ class EmailLoginRequest(BaseModel):
 
 
 class PinLoginRequest(BaseModel):
-    """PIN login with family context (for children)."""
+    """PIN login with family context (for children).
+
+    user_id is optional - if not provided, the child is looked up by PIN
+    within the family (PIN must be unique within family).
+    """
     family_code: str = Field(..., min_length=6, max_length=16)
-    user_id: int
+    user_id: int | None = None
     pin: str = Field(..., min_length=4, max_length=8)
 
 

@@ -150,7 +150,11 @@ def login_email(request: Request, payload: EmailLoginRequest, db: Session = Depe
 @router.post("/login/pin", response_model=TokenResponse)
 @limiter.limit("5/minute")
 def login_pin(request: Request, payload: PinLoginRequest, db: Session = Depends(get_db_session)):
-    """Login with PIN within a family context (for children)."""
+    """Login with PIN within a family context (for children).
+
+    If user_id is provided, verifies that specific user.
+    If user_id is not provided, looks up child by PIN within the family.
+    """
     # Find family by invite code
     family = db.query(Family).filter(
         Family.invite_code == payload.family_code,
@@ -159,17 +163,36 @@ def login_pin(request: Request, payload: PinLoginRequest, db: Session = Depends(
     if not family:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiger Familiencode")
 
-    # Check if user is member of this family
-    membership = db.query(FamilyMember).filter(
-        FamilyMember.family_id == family.id,
-        FamilyMember.user_id == payload.user_id,
-    ).first()
-    if not membership:
+    user = None
+    membership = None
+
+    if payload.user_id:
+        # Specific user_id provided - verify that user
+        membership = db.query(FamilyMember).filter(
+            FamilyMember.family_id == family.id,
+            FamilyMember.user_id == payload.user_id,
+        ).first()
+        if membership:
+            user = db.get(User, payload.user_id)
+    else:
+        # No user_id - find child by PIN within the family
+        # Get all family members (children)
+        memberships = db.query(FamilyMember).filter(
+            FamilyMember.family_id == family.id,
+        ).all()
+
+        for m in memberships:
+            candidate = db.get(User, m.user_id)
+            if candidate and candidate.pin_hash and verify_pin(payload.pin, candidate.pin_hash):
+                user = candidate
+                membership = m
+                break
+
+    if not membership or not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültige Anmeldedaten")
 
-    # Verify PIN
-    user = db.get(User, payload.user_id)
-    if not user or not user.pin_hash or not verify_pin(payload.pin, user.pin_hash):
+    # Verify PIN (if user_id was provided, we still need to check PIN)
+    if payload.user_id and (not user.pin_hash or not verify_pin(payload.pin, user.pin_hash)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültige Anmeldedaten")
 
     if not user.is_active:
