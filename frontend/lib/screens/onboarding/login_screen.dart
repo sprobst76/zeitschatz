@@ -41,31 +41,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         password: _passwordController.text,
       );
 
-      // Fetch families to see if user has one
-      final families = await api.fetchFamilies();
-
-      // For now, use first family if available
-      int? familyId;
-      String? familyName;
-      if (families.isNotEmpty) {
-        familyId = families[0]['id'] as int;
-        familyName = families[0]['name'] as String;
-      }
-
+      // Set session first so apiClientProvider gets updated with token
       ref.read(sessionProvider.notifier).setSession(
         token: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         userId: 0, // Will be set from JWT claims
         role: 'parent',
-        familyId: familyId,
-        familyName: familyName,
+        familyId: null,
+        familyName: null,
         email: _emailController.text.trim(),
       );
 
-      if (mounted) {
-        if (familyId != null) {
+      // Now get fresh API client with the new token
+      final authenticatedApi = ref.read(apiClientProvider);
+
+      // Fetch families to see if user has one
+      final families = await authenticatedApi.fetchFamilies();
+
+      // Update session with family info if available
+      if (families.isNotEmpty) {
+        final familyId = families[0]['id'] as int;
+        final familyName = families[0]['name'] as String;
+        ref.read(sessionProvider.notifier).setFamily(
+          familyId: familyId,
+          familyName: familyName,
+        );
+
+        if (mounted) {
           context.go('/parent');
-        } else {
+        }
+      } else {
+        if (mounted) {
           context.go('/family-setup');
         }
       }
