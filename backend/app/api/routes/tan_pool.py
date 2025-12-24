@@ -110,7 +110,7 @@ def import_tans(
     return TanPoolImportResponse(imported=imported, skipped=skipped, errors=errors)
 
 
-@router.get("/", response_model=list[TanPoolEntry], dependencies=[Depends(require_role("parent"))])
+@router.get("", response_model=list[TanPoolEntry], dependencies=[Depends(require_role("parent"))])
 def list_tans(
     family_id: int = Query(..., description="Familie"),
     available_only: bool = False,
