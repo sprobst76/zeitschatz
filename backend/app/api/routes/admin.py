@@ -113,8 +113,8 @@ class TanPoolAdminRead(BaseModel):
     tan_code: str
     minutes: int
     target_device: str
-    is_used: bool
-    valid_until: Optional[datetime]
+    used: bool
+    used_at: Optional[datetime]
     family_id: Optional[int]
     family_name: Optional[str] = None
 
@@ -127,7 +127,6 @@ class TanPoolCreateRequest(BaseModel):
     minutes: int
     target_device: str
     family_id: Optional[int] = None
-    valid_until: Optional[datetime] = None
 
 
 class StatsResponse(BaseModel):
@@ -620,7 +619,7 @@ def list_tan_pool(
     if family_id:
         query = query.filter(TanPool.family_id == family_id)
     if available_only:
-        query = query.filter(TanPool.is_used == False)
+        query = query.filter(TanPool.used == False)
 
     tans = query.order_by(TanPool.created_at.desc()).all()
 
@@ -636,8 +635,8 @@ def list_tan_pool(
             tan_code=tan.tan_code,
             minutes=tan.minutes,
             target_device=tan.target_device,
-            is_used=tan.is_used,
-            valid_until=tan.valid_until,
+            used=tan.used,
+            used_at=tan.used_at,
             family_id=tan.family_id,
             family_name=family_name,
         ))
@@ -662,8 +661,7 @@ def add_tan(
         minutes=data.minutes,
         target_device=data.target_device,
         family_id=data.family_id,
-        valid_until=data.valid_until,
-        is_used=False,
+        used=False,
     )
     db.add(tan)
     db.commit()
@@ -682,7 +680,7 @@ def delete_tan(
     if not tan:
         raise HTTPException(status_code=404, detail="TAN nicht gefunden")
 
-    if tan.is_used:
+    if tan.used:
         raise HTTPException(status_code=400, detail="Verwendete TANs koennen nicht geloescht werden")
 
     db.delete(tan)
@@ -716,8 +714,8 @@ def get_stats(
     submissions_pending = db.query(Submission).filter(Submission.status == "pending").count()
     submissions_approved = db.query(Submission).filter(Submission.status == "approved").count()
 
-    tan_pool_available = db.query(TanPool).filter(TanPool.is_used == False).count()
-    tan_pool_used = db.query(TanPool).filter(TanPool.is_used == True).count()
+    tan_pool_available = db.query(TanPool).filter(TanPool.used == False).count()
+    tan_pool_used = db.query(TanPool).filter(TanPool.used == True).count()
 
     minutes_result = db.query(func.sum(TanLedger.minutes)).scalar()
     minutes_earned_total = minutes_result or 0
@@ -1052,7 +1050,7 @@ ADMIN_HTML = """
                             <th>Geraet</th>
                             <th>Familie</th>
                             <th>Status</th>
-                            <th>Gueltig bis</th>
+                            <th>Verwendet am</th>
                             <th>Aktionen</th>
                         </tr>
                     </thead>
@@ -1386,9 +1384,9 @@ ADMIN_HTML = """
                     <td>${t.minutes}</td>
                     <td>${t.target_device}</td>
                     <td>${t.family_name || '-'}</td>
-                    <td><span class="badge ${t.is_used ? 'badge-secondary' : 'badge-success'}">${t.is_used ? 'Verwendet' : 'Verfuegbar'}</span></td>
-                    <td>${t.valid_until ? new Date(t.valid_until).toLocaleDateString('de-DE') : '-'}</td>
-                    <td>${!t.is_used ? `<button class="btn btn-danger btn-sm" onclick="deleteTan(${t.id})">Loeschen</button>` : ''}</td>
+                    <td><span class="badge ${t.used ? 'badge-secondary' : 'badge-success'}">${t.used ? 'Verwendet' : 'Verfuegbar'}</span></td>
+                    <td>${t.used_at ? new Date(t.used_at).toLocaleString('de-DE') : '-'}</td>
+                    <td>${!t.used ? `<button class="btn btn-danger btn-sm" onclick="deleteTan(${t.id})">Loeschen</button>` : ''}</td>
                 </tr>
             `).join('');
         }
