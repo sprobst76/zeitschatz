@@ -93,14 +93,17 @@ class ApiClient {
 
   Future<TokenPair> loginWithPin({
     required String familyCode,
-    required int userId,
     required String pin,
+    int? userId,
   }) async {
-    final res = await _dio.post('/auth/login/pin', data: {
+    final data = <String, dynamic>{
       'family_code': familyCode,
-      'user_id': userId,
       'pin': pin,
-    });
+    };
+    if (userId != null) {
+      data['user_id'] = userId;
+    }
+    final res = await _dio.post('/auth/login/pin', data: data);
     return TokenPair(
       accessToken: res.data['access_token'] as String,
       refreshToken: res.data['refresh_token'] as String?,
