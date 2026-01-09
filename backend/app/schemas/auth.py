@@ -25,6 +25,14 @@ class PinLoginRequest(BaseModel):
     pin: str = Field(..., min_length=4, max_length=8)
 
 
+class CodeLoginRequest(BaseModel):
+    """Simple code-based login (for children).
+
+    Just one memorable code like "TIGER-BLAU-42".
+    """
+    code: str = Field(..., min_length=8, max_length=30)
+
+
 class RegisterRequest(BaseModel):
     """Parent registration with email/password."""
     email: EmailStr

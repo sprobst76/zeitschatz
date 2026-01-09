@@ -18,6 +18,7 @@ from app.core.security import (
 from app.models.user import User
 from app.models.family import Family, FamilyMember
 from app.schemas.auth import (
+    CodeLoginRequest,
     EmailLoginRequest,
     ForgotPasswordRequest,
     LoginRequest,
@@ -103,9 +104,10 @@ def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db_sessi
             detail="Ungültiger oder abgelaufener Verifizierungslink",
         )
 
-    # Mark email as verified
+    # Mark email as verified and update last login
     user.email_verified = True
     user.verification_token = None
+    user.last_login = datetime.utcnow()
     db.commit()
 
     # Return tokens to auto-login
@@ -133,6 +135,10 @@ def login_email(request: Request, payload: EmailLoginRequest, db: Session = Depe
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bitte bestätige zuerst deine Email-Adresse",
         )
+
+    # Update last login timestamp
+    user.last_login = datetime.utcnow()
+    db.commit()
 
     # Get user's families for token
     memberships = db.query(FamilyMember).filter(FamilyMember.user_id == user.id).all()
@@ -198,6 +204,10 @@ def login_pin(request: Request, payload: PinLoginRequest, db: Session = Depends(
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Konto deaktiviert")
 
+    # Update last login timestamp
+    user.last_login = datetime.utcnow()
+    db.commit()
+
     access_token = create_access_token({
         "sub": user.id,
         "role": user.role,
@@ -219,8 +229,48 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db_
     user = db.get(User, payload.user_id)
     if not user or not user.pin_hash or not verify_pin(payload.pin, user.pin_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    # Update last login timestamp
+    user.last_login = datetime.utcnow()
+    db.commit()
+
     access_token = create_access_token({"sub": user.id, "role": user.role})
     refresh_token = create_refresh_token({"sub": user.id, "role": user.role})
+    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+
+
+@router.post("/login/code", response_model=TokenResponse)
+@limiter.limit("5/minute")
+def login_code(request: Request, payload: CodeLoginRequest, db: Session = Depends(get_db_session)):
+    """Simple code-based login for children.
+
+    Uses a memorable code like "TIGER-BLAU-42" instead of family code + PIN.
+    """
+    # Normalize the code (uppercase, trimmed)
+    code = payload.code.strip().upper()
+
+    # Find user by login code
+    user = db.query(User).filter(User.login_code == code).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungueltiger Code")
+
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Konto deaktiviert")
+
+    # Update last login timestamp
+    user.last_login = datetime.utcnow()
+    db.commit()
+
+    # Get user's family membership for token context
+    membership = db.query(FamilyMember).filter(FamilyMember.user_id == user.id).first()
+
+    token_data = {"sub": user.id, "role": user.role}
+    if membership:
+        token_data["family_id"] = membership.family_id
+        token_data["family_role"] = membership.role_in_family
+
+    access_token = create_access_token(token_data)
+    refresh_token = create_refresh_token(token_data)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 

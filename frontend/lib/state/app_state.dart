@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_config.dart';
 import '../services/api_client.dart';
+import '../services/session_storage.dart';
 
 // Theme State
 class ThemeNotifier extends StateNotifier<ThemeMode> {
@@ -73,9 +75,36 @@ class SessionState {
 }
 
 class SessionNotifier extends StateNotifier<SessionState> {
+  final SessionStorage _storage = SessionStorage();
+  final _streamController = StreamController<SessionState>.broadcast();
+  bool _initialized = false;
+
   SessionNotifier() : super(const SessionState());
 
-  void setSession({
+  Stream<SessionState> get stream => _streamController.stream;
+
+  /// Initialize session from storage (call on app start)
+  Future<void> initialize() async {
+    if (_initialized) return;
+    _initialized = true;
+
+    final savedSession = await _storage.loadSession();
+    if (savedSession != null && savedSession['token'] != null) {
+      state = SessionState(
+        token: savedSession['token'],
+        refreshToken: savedSession['refreshToken'],
+        userId: savedSession['userId'],
+        role: savedSession['role'] ?? 'guest',
+        familyId: savedSession['familyId'],
+        familyName: savedSession['familyName'],
+        userName: savedSession['userName'],
+        email: savedSession['email'],
+      );
+      _streamController.add(state);
+    }
+  }
+
+  Future<void> setSession({
     required String token,
     String? refreshToken,
     required int userId,
@@ -84,8 +113,21 @@ class SessionNotifier extends StateNotifier<SessionState> {
     String? familyName,
     String? userName,
     String? email,
-  }) {
+  }) async {
     state = SessionState(
+      token: token,
+      refreshToken: refreshToken,
+      userId: userId,
+      role: role,
+      familyId: familyId,
+      familyName: familyName,
+      userName: userName,
+      email: email,
+    );
+    _streamController.add(state);
+
+    // Persist to storage
+    await _storage.saveSession(
       token: token,
       refreshToken: refreshToken,
       userId: userId,
@@ -97,18 +139,33 @@ class SessionNotifier extends StateNotifier<SessionState> {
     );
   }
 
-  void updateTokens({required String token, String? refreshToken}) {
+  Future<void> updateTokens({required String token, String? refreshToken}) async {
     state = state.copyWith(token: token, refreshToken: refreshToken ?? state.refreshToken);
+    _streamController.add(state);
+    await _storage.updateTokens(token: token, refreshToken: refreshToken);
   }
 
-  void setFamily({required int familyId, required String familyName}) {
+  Future<void> setFamily({required int familyId, required String familyName}) async {
     state = state.copyWith(familyId: familyId, familyName: familyName);
+    _streamController.add(state);
+    await _storage.updateFamily(familyId: familyId, familyName: familyName);
   }
 
-  void clear() {
+  Future<void> clear() async {
     state = const SessionState();
+    _streamController.add(state);
+    await _storage.clearSession();
+  }
+
+  @override
+  void dispose() {
+    _streamController.close();
+    super.dispose();
   }
 }
+
+/// Provider for session storage (for biometric settings etc.)
+final sessionStorageProvider = Provider((ref) => SessionStorage());
 
 final sessionProvider = StateNotifierProvider<SessionNotifier, SessionState>((ref) {
   return SessionNotifier();

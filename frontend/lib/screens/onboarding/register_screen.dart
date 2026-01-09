@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -47,6 +48,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         name: _nameController.text.trim(),
       );
 
+      // Trigger password manager save prompt
+      TextInput.finishAutofillContext();
+
       if (mounted) {
         // Show verification hint
         showDialog(
@@ -94,9 +98,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
+        child: AutofillGroup(
+          child: Form(
+            key: _formKey,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Icon(
@@ -109,6 +114,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 controller: _nameController,
                 textInputAction: TextInputAction.next,
                 textCapitalization: TextCapitalization.words,
+                autofillHints: const [AutofillHints.name],
                 decoration: const InputDecoration(
                   labelText: 'Name',
                   prefixIcon: Icon(Icons.person_outlined),
@@ -126,6 +132,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
                 decoration: const InputDecoration(
                   labelText: 'E-Mail',
                   prefixIcon: Icon(Icons.email_outlined),
@@ -146,6 +153,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.newPassword],
                 decoration: InputDecoration(
                   labelText: 'Passwort',
                   prefixIcon: const Icon(Icons.lock_outlined),
@@ -176,6 +184,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 controller: _confirmPasswordController,
                 obscureText: _obscureConfirm,
                 textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.newPassword],
                 onFieldSubmitted: (_) => _register(),
                 decoration: InputDecoration(
                   labelText: 'Passwort bestaetigen',
@@ -244,6 +253,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ],
               ),
             ],
+          ),
           ),
         ),
       ),

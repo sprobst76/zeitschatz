@@ -21,7 +21,7 @@ from app.api.routes.families import router as families_router
 from app.api.routes.admin import router as admin_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.session import SessionLocal
-from app.jobs.retention import clean_expired_photos
+from app.jobs.retention import clean_expired_photos, clean_inactive_users
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.core.config import get_settings
 
@@ -68,12 +68,20 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     async def startup_event():
-        # Daily photo retention cleanup
+        # Daily photo retention cleanup at 03:00
         scheduler.add_job(
             lambda: run_retention_job(),
             trigger="cron",
             hour=3,
             id="photo-retention",
+            replace_existing=True,
+        )
+        # Daily inactive user cleanup at 04:00
+        scheduler.add_job(
+            lambda: run_inactive_user_cleanup(),
+            trigger="cron",
+            hour=4,
+            id="inactive-user-cleanup",
             replace_existing=True,
         )
         scheduler.start()
@@ -84,6 +92,15 @@ def create_app() -> FastAPI:
             removed = clean_expired_photos(db)
             if removed:
                 print(f"[retention] removed {len(removed)} expired photos")
+        finally:
+            db.close()
+
+    def run_inactive_user_cleanup():
+        db = SessionLocal()
+        try:
+            deleted = clean_inactive_users(db, inactive_days=90)
+            if deleted:
+                print(f"[retention] deleted {len(deleted)} inactive users: {deleted}")
         finally:
             db.close()
 

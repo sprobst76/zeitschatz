@@ -14,44 +14,14 @@ class ChildLoginScreen extends ConsumerStatefulWidget {
 
 class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _familyCodeController = TextEditingController();
-  final _pinController = TextEditingController();
+  final _codeController = TextEditingController();
   bool _isLoading = false;
   String? _error;
-  List<dynamic>? _children;
-  int? _selectedChildId;
 
   @override
   void dispose() {
-    _familyCodeController.dispose();
-    _pinController.dispose();
+    _codeController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadChildren() async {
-    if (_familyCodeController.text.length < 4) return;
-
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      // For now, we'll need to use the family code to get children
-      // This would require a public endpoint or we skip this step
-      // For simplicity, let's just proceed to PIN entry
-      setState(() {
-        _children = []; // Placeholder - in real app, fetch from API
-      });
-    } catch (e) {
-      setState(() {
-        _error = 'Familiencode ungueltig.';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
   }
 
   Future<void> _login() async {
@@ -64,25 +34,26 @@ class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
 
     try {
       final api = ref.read(apiClientProvider);
-      final tokens = await api.loginWithPin(
-        familyCode: _familyCodeController.text.trim().toUpperCase(),
-        pin: _pinController.text,
-      );
+      final code = _codeController.text.trim().toUpperCase();
+      final tokens = await api.loginWithCode(code);
 
       // Set session first so apiClientProvider gets updated
-      ref.read(sessionProvider.notifier).setSession(
+      await ref.read(sessionProvider.notifier).setSession(
         token: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         userId: 0, // Will be set from JWT claims
         role: 'child',
       );
 
+      // Trigger password manager save prompt
+      TextInput.finishAutofillContext();
+
       if (mounted) {
         context.go('/child');
       }
     } catch (e) {
       setState(() {
-        _error = 'Login fehlgeschlagen. Bitte Code und PIN pruefen.';
+        _error = 'Login fehlgeschlagen. Bitte Code pruefen.';
       });
     } finally {
       if (mounted) {
@@ -104,9 +75,10 @@ class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
+        child: AutofillGroup(
+          child: Form(
+            key: _formKey,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Icon(
@@ -124,7 +96,7 @@ class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Gib den Familiencode und deine PIN ein.',
+                'Gib deinen Login-Code ein.',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -132,48 +104,47 @@ class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
               ),
               const SizedBox(height: 32),
               TextFormField(
-                controller: _familyCodeController,
+                controller: _codeController,
                 textCapitalization: TextCapitalization.characters,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'Familiencode',
-                  prefixIcon: Icon(Icons.home_outlined),
-                  border: OutlineInputBorder(),
-                  hintText: 'z.B. ABCD1234',
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.username],
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                ),
+                textAlign: TextAlign.center,
+                inputFormatters: [
+                  UpperCaseTextFormatter(),
+                ],
+                onFieldSubmitted: (_) => _login(),
+                decoration: InputDecoration(
+                  labelText: 'Login-Code',
+                  prefixIcon: const Icon(Icons.vpn_key),
+                  border: const OutlineInputBorder(),
+                  hintText: 'TIGER-BLAU-42',
+                  hintStyle: TextStyle(
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                    fontSize: 20,
+                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Bitte Familiencode eingeben';
+                    return 'Bitte Code eingeben';
+                  }
+                  if (value.length < 8) {
+                    return 'Code ist zu kurz';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _pinController,
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                textInputAction: TextInputAction.done,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(6),
-                ],
-                onFieldSubmitted: (_) => _login(),
-                decoration: const InputDecoration(
-                  labelText: 'PIN',
-                  prefixIcon: Icon(Icons.pin),
-                  border: OutlineInputBorder(),
-                  hintText: '****',
+              Text(
+                'Frag deine Eltern nach dem Code!',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Bitte PIN eingeben';
-                  }
-                  if (value.length < 4) {
-                    return 'PIN muss mindestens 4 Ziffern haben';
-                  }
-                  return null;
-                },
+                textAlign: TextAlign.center,
               ),
               if (_error != null) ...[
                 const SizedBox(height: 16),
@@ -211,8 +182,23 @@ class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
               ),
             ],
           ),
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Text formatter to convert input to uppercase
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
     );
   }
 }

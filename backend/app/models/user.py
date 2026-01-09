@@ -15,6 +15,7 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     allowed_devices = Column(JSON, nullable=True)  # List of device types: ["phone", "pc", "console"]
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_login = Column(DateTime, nullable=True)  # Track last login for inactive cleanup
 
     # Email/Password auth (for parents)
     email = Column(String(255), unique=True, nullable=True, index=True)
@@ -23,6 +24,9 @@ class User(Base):
     verification_token = Column(String(64), nullable=True)
     reset_token = Column(String(64), nullable=True)
     reset_expires_at = Column(DateTime, nullable=True)
+
+    # Simple code-based login (for children)
+    login_code = Column(String(30), unique=True, nullable=True, index=True)  # e.g., "TIGER-BLAU-42"
 
     # Relationships
     device_tokens = relationship("DeviceToken", back_populates="user", cascade="all, delete-orphan")

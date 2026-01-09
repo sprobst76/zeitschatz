@@ -110,6 +110,15 @@ class ApiClient {
     );
   }
 
+  /// Login with a simple memorable code (e.g., "TIGER-BLAU-42")
+  Future<TokenPair> loginWithCode(String code) async {
+    final res = await _dio.post('/auth/login/code', data: {'code': code});
+    return TokenPair(
+      accessToken: res.data['access_token'] as String,
+      refreshToken: res.data['refresh_token'] as String?,
+    );
+  }
+
   Future<void> forgotPassword(String email) async {
     await _dio.post('/auth/forgot-password', data: {'email': email});
   }

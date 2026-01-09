@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Gradient for the treasure chest -->
+    <linearGradient id="chestGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B5A2B"/>
+      <stop offset="100%" style="stop-color:#5D3A1A"/>
+    </linearGradient>
+    <!-- Gradient for the lid -->
+    <linearGradient id="lidGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#A0522D"/>
+      <stop offset="100%" style="stop-color:#8B4513"/>
+    </linearGradient>
+    <!-- Gold gradient -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="50%" style="stop-color:#FFA500"/>
+      <stop offset="100%" style="stop-color:#FFD700"/>
+    </linearGradient>
+    <!-- Clock face gradient -->
+    <linearGradient id="clockGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF"/>
+      <stop offset="100%" style="stop-color:#E8E8E8"/>
+    </linearGradient>
+    <!-- Background gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A90D9"/>
+      <stop offset="100%" style="stop-color:#2E5C8A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#bgGrad)"/>
+
+  <!-- Treasure chest body -->
+  <rect x="96" y="280" width="320" height="140" rx="12" fill="url(#chestGrad)"/>
+
+  <!-- Chest horizontal bands -->
+  <rect x="96" y="300" width="320" height="16" fill="#3D2817"/>
+  <rect x="96" y="380" width="320" height="16" fill="#3D2817"/>
+
+  <!-- Chest lid (slightly open) -->
+  <path d="M96 280 Q96 240 136 240 L376 240 Q416 240 416 280 L416 290 L96 290 Z" fill="url(#lidGrad)"/>
+  <rect x="96" y="260" width="320" height="16" fill="#3D2817"/>
+
+  <!-- Gold lock plate -->
+  <rect x="226" y="300" width="60" height="80" rx="6" fill="url(#goldGrad)"/>
+  <circle cx="256" cy="350" r="12" fill="#5D3A1A"/>
+
+  <!-- Clock coming out of chest -->
+  <circle cx="256" cy="180" r="100" fill="url(#goldGrad)" stroke="#B8860B" stroke-width="8"/>
+  <circle cx="256" cy="180" r="80" fill="url(#clockGrad)"/>
+
+  <!-- Clock hour markers -->
+  <circle cx="256" cy="116" r="6" fill="#2E5C8A"/>
+  <circle cx="320" cy="180" r="6" fill="#2E5C8A"/>
+  <circle cx="256" cy="244" r="6" fill="#2E5C8A"/>
+  <circle cx="192" cy="180" r="6" fill="#2E5C8A"/>
+
+  <!-- Small hour markers -->
+  <circle cx="288" cy="124" r="4" fill="#4A90D9"/>
+  <circle cx="312" cy="148" r="4" fill="#4A90D9"/>
+  <circle cx="312" cy="212" r="4" fill="#4A90D9"/>
+  <circle cx="288" cy="236" r="4" fill="#4A90D9"/>
+  <circle cx="224" cy="236" r="4" fill="#4A90D9"/>
+  <circle cx="200" cy="212" r="4" fill="#4A90D9"/>
+  <circle cx="200" cy="148" r="4" fill="#4A90D9"/>
+  <circle cx="224" cy="124" r="4" fill="#4A90D9"/>
+
+  <!-- Clock hands -->
+  <line x1="256" y1="180" x2="256" y2="130" stroke="#2E5C8A" stroke-width="8" stroke-linecap="round"/>
+  <line x1="256" y1="180" x2="296" y2="200" stroke="#2E5C8A" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Clock center -->
+  <circle cx="256" cy="180" r="10" fill="#FFD700"/>
+
+  <!-- Sparkles around the clock -->
+  <polygon points="380,100 386,116 402,116 390,126 394,142 380,132 366,142 370,126 358,116 374,116" fill="#FFD700"/>
+  <polygon points="132,140 136,150 146,150 138,156 141,166 132,160 123,166 126,156 118,150 128,150" fill="#FFD700"/>
+  <polygon points="340,260 343,267 350,267 345,272 347,279 340,275 333,279 335,272 330,267 337,267" fill="#FFD700"/>
+</svg>

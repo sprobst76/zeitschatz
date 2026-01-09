@@ -48,6 +48,12 @@
 - [ ] CI-Pipeline (Lint + Tests) für GitHub Actions.
 - [ ] Reverse-Proxy-Beispiel (Caddy/Nginx) für Prod-Deployment.
 
+## Design / Branding
+- [x] App-Icon erstellt (minimalistisch: goldene Uhr auf blauem Hintergrund)
+- [ ] Alternative: Detailliertes Icon mit Schatztruhe + Uhr (`assets/icon/zeitschatz_icon.svg`, `icon_512_detailed.png`) - evtl. für Splash-Screen oder Marketing
+- [ ] Splash-Screen mit Animation (Uhr/Schatztruhe)
+- [ ] App-Store Screenshots
+
 ## Docs
 - [ ] OpenAPI-Doku verlinken (FastAPI generiert automatisch unter `/docs`).
 - [ ] Screenshots/Flowcharts ergänzen, sobald UI steht.

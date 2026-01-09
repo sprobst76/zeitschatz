@@ -17,8 +17,11 @@ pubspec.lock
 
 # Env / IDE
 .env
+.env.local
+.env.prod
 .DS_Store
 .idea/
 .vscode/
+
+# Builds
 *.apk
-.env.prod

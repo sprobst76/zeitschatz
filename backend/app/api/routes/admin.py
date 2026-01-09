@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db_session
 from app.core.security import get_current_user, hash_password, verify_password
+from app.core.login_code import generate_login_code
 from app.models.user import User
 from app.models.task import Task
 from app.models.submission import Submission
@@ -35,6 +36,7 @@ class UserAdminRead(BaseModel):
     is_active: bool
     created_at: datetime
     families: List[dict] = []
+    login_code: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -82,7 +84,7 @@ class TaskAdminRead(BaseModel):
     title: str
     description: Optional[str]
     tan_reward: int
-    target_device: Optional[str]
+    target_devices: Optional[List[str]] = None
     is_active: bool
     family_id: Optional[int]
     family_name: Optional[str] = None
@@ -221,6 +223,7 @@ def list_users(
             is_active=user.is_active,
             created_at=user.created_at,
             families=families,
+            login_code=user.login_code,
         ))
 
     return result
@@ -257,6 +260,7 @@ def get_user(
         is_active=user.is_active,
         created_at=user.created_at,
         families=families,
+        login_code=user.login_code,
     )
 
 
@@ -344,6 +348,40 @@ def set_user_password(
     return MessageResponse(message=f"Passwort fuer {user.name} wurde geaendert")
 
 
+@router.delete("/users/{user_id}", response_model=MessageResponse)
+def delete_user_permanently(
+    user_id: int,
+    db: Session = Depends(get_db_session),
+    admin: User = Depends(require_admin),
+):
+    """Permanently delete a user and all their data."""
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User nicht gefunden")
+
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="Kann eigenen Account nicht loeschen")
+
+    user_name = user.name
+    user_email = user.email
+
+    # Delete family memberships
+    db.query(FamilyMember).filter(FamilyMember.user_id == user_id).delete()
+
+    # Delete submissions by this user
+    db.query(Submission).filter(Submission.child_id == user_id).delete()
+
+    # Delete ledger entries for this user
+    db.query(TanLedger).filter(TanLedger.child_id == user_id).delete()
+
+    # Delete the user
+    db.delete(user)
+    db.commit()
+
+    logger.info(f"Admin {admin.id} permanently deleted user {user_id} ({user_name}, {user_email})")
+    return MessageResponse(message=f"User {user_name} wurde dauerhaft geloescht")
+
+
 @router.post("/change-password", response_model=MessageResponse)
 def change_own_password(
     data: OwnPasswordChangeRequest,
@@ -359,6 +397,34 @@ def change_own_password(
 
     logger.info(f"Admin {admin.id} changed own password")
     return MessageResponse(message="Passwort wurde geaendert")
+
+
+@router.post("/users/{user_id}/generate-login-code", response_model=MessageResponse)
+def generate_user_login_code(
+    user_id: int,
+    db: Session = Depends(get_db_session),
+    admin: User = Depends(require_admin),
+):
+    """Generate or regenerate a login code for a user."""
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User nicht gefunden")
+
+    # Get all existing codes to ensure uniqueness
+    existing_codes = set(
+        code for (code,) in db.query(User.login_code).filter(User.login_code.isnot(None)).all()
+    )
+
+    # Generate a unique code
+    for _ in range(100):
+        new_code = generate_login_code()
+        if new_code not in existing_codes:
+            user.login_code = new_code
+            db.commit()
+            logger.info(f"Admin {admin.id} generated login code for user {user_id}")
+            return MessageResponse(message=f"Login-Code: {new_code}")
+
+    raise HTTPException(status_code=500, detail="Konnte keinen eindeutigen Code generieren")
 
 
 # --- Family Endpoints ---
@@ -535,7 +601,7 @@ def list_tasks(
             title=task.title,
             description=task.description,
             tan_reward=task.tan_reward,
-            target_device=task.target_device,
+            target_devices=task.target_devices,
             is_active=task.is_active,
             family_id=task.family_id,
             family_name=family_name,
@@ -793,6 +859,7 @@ ADMIN_HTML = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZeitSchatz Admin</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%235BA3E0'/%3E%3Cstop offset='100%25' style='stop-color:%233178B5'/%3E%3C/linearGradient%3E%3ClinearGradient id='gold' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23FFE066'/%3E%3Cstop offset='50%25' style='stop-color:%23FFB800'/%3E%3Cstop offset='100%25' style='stop-color:%23FFE066'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='0' y='0' width='512' height='512' rx='96' fill='url(%23bg)'/%3E%3Cg transform='translate(256,256)'%3E%3Ccircle r='180' fill='none' stroke='url(%23gold)' stroke-width='24'/%3E%3Ccircle r='140' fill='white'/%3E%3Crect x='-8' y='-120' width='16' height='32' rx='4' fill='%233178B5'/%3E%3Crect x='-8' y='88' width='16' height='32' rx='4' fill='%233178B5'/%3E%3Crect x='-120' y='-8' width='32' height='16' rx='4' fill='%233178B5'/%3E%3Crect x='88' y='-8' width='32' height='16' rx='4' fill='%233178B5'/%3E%3Cline x1='0' y1='0' x2='-50' y2='-70' stroke='%233178B5' stroke-width='16' stroke-linecap='round'/%3E%3Cline x1='0' y1='0' x2='50' y2='-70' stroke='%233178B5' stroke-width='16' stroke-linecap='round'/%3E%3Ccircle r='24' fill='url(%23gold)'/%3E%3Cpolygon points='0,-16 6,-6 16,0 6,6 0,16 -6,6 -16,0 -6,-6' fill='white'/%3E%3C/g%3E%3C/svg%3E">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f1a; color: #e0e0e0; }
@@ -910,7 +977,7 @@ ADMIN_HTML = """
     <div class="container">
         <!-- Login -->
         <div id="loginSection" class="login-form">
-            <h1>ZeitSchatz Admin</h1>
+            <h1><svg width="40" height="40" viewBox="0 0 512 512" style="vertical-align: middle; margin-right: 10px;"><defs><linearGradient id="bg1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#5BA3E0"/><stop offset="100%" style="stop-color:#3178B5"/></linearGradient><linearGradient id="gold1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#FFE066"/><stop offset="50%" style="stop-color:#FFB800"/><stop offset="100%" style="stop-color:#FFE066"/></linearGradient></defs><rect width="512" height="512" rx="96" fill="url(#bg1)"/><g transform="translate(256,256)"><circle r="180" fill="none" stroke="url(#gold1)" stroke-width="24"/><circle r="140" fill="white"/><rect x="-8" y="-120" width="16" height="32" rx="4" fill="#3178B5"/><rect x="-8" y="88" width="16" height="32" rx="4" fill="#3178B5"/><rect x="-120" y="-8" width="32" height="16" rx="4" fill="#3178B5"/><rect x="88" y="-8" width="32" height="16" rx="4" fill="#3178B5"/><line x1="0" y1="0" x2="-50" y2="-70" stroke="#3178B5" stroke-width="16" stroke-linecap="round"/><line x1="0" y1="0" x2="50" y2="-70" stroke="#3178B5" stroke-width="16" stroke-linecap="round"/><circle r="24" fill="url(#gold1)"/><polygon points="0,-16 6,-6 16,0 6,6 0,16 -6,6 -16,0 -6,-6" fill="white"/></g></svg>ZeitSchatz Admin</h1>
             <input type="email" id="email" placeholder="Email" autocomplete="email">
             <input type="password" id="password" placeholder="Passwort" autocomplete="current-password">
             <div id="loginError" class="error hidden"></div>
@@ -920,7 +987,7 @@ ADMIN_HTML = """
         <!-- Dashboard -->
         <div id="dashboard" class="hidden">
             <div class="header">
-                <h1>ZeitSchatz Admin</h1>
+                <h1><svg width="36" height="36" viewBox="0 0 512 512" style="vertical-align: middle; margin-right: 10px;"><defs><linearGradient id="bg2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#5BA3E0"/><stop offset="100%" style="stop-color:#3178B5"/></linearGradient><linearGradient id="gold2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#FFE066"/><stop offset="50%" style="stop-color:#FFB800"/><stop offset="100%" style="stop-color:#FFE066"/></linearGradient></defs><rect width="512" height="512" rx="96" fill="url(#bg2)"/><g transform="translate(256,256)"><circle r="180" fill="none" stroke="url(#gold2)" stroke-width="24"/><circle r="140" fill="white"/><rect x="-8" y="-120" width="16" height="32" rx="4" fill="#3178B5"/><rect x="-8" y="88" width="16" height="32" rx="4" fill="#3178B5"/><rect x="-120" y="-8" width="32" height="16" rx="4" fill="#3178B5"/><rect x="88" y="-8" width="32" height="16" rx="4" fill="#3178B5"/><line x1="0" y1="0" x2="-50" y2="-70" stroke="#3178B5" stroke-width="16" stroke-linecap="round"/><line x1="0" y1="0" x2="50" y2="-70" stroke="#3178B5" stroke-width="16" stroke-linecap="round"/><circle r="24" fill="url(#gold2)"/><polygon points="0,-16 6,-6 16,0 6,6 0,16 -6,6 -16,0 -6,-6" fill="white"/></g></svg>ZeitSchatz Admin</h1>
                 <div class="header-actions">
                     <button class="btn btn-secondary" onclick="showModal('settingsModal')">Einstellungen</button>
                     <button class="btn btn-primary" onclick="loadAll()">Aktualisieren</button>
@@ -963,6 +1030,7 @@ ADMIN_HTML = """
                             <th>Name</th>
                             <th>Email</th>
                             <th>Rolle</th>
+                            <th>Login-Code</th>
                             <th>Familien</th>
                             <th>Status</th>
                             <th>Aktionen</th>
@@ -1114,6 +1182,15 @@ ADMIN_HTML = """
                     </select>
                 </div>
                 <hr style="border-color:#333;margin:20px 0;">
+                <h3>Login-Code (fuer Kinder)</h3>
+                <div class="form-group">
+                    <div class="flex gap-10" style="align-items:center;">
+                        <code id="editUserLoginCode" style="font-size:1.2em;padding:8px 12px;background:#252540;border-radius:6px;">-</code>
+                        <button class="btn btn-success btn-sm" onclick="generateLoginCode()">Neuer Code</button>
+                    </div>
+                    <p class="text-muted text-small mt-10">Kinder koennen sich mit diesem Code anmelden.</p>
+                </div>
+                <hr style="border-color:#333;margin:20px 0;">
                 <h3>Neues Passwort setzen</h3>
                 <div class="form-group">
                     <label>Neues Passwort (leer lassen um nicht zu aendern)</label>
@@ -1241,7 +1318,10 @@ ADMIN_HTML = """
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers }
             });
             if (res.status === 401) { logout(); return null; }
-            return res.json();
+            const data = await res.json();
+            data._ok = res.ok;
+            data._status = res.status;
+            return data;
         }
 
         async function loadAll() {
@@ -1295,6 +1375,7 @@ ADMIN_HTML = """
                     <td>${u.name}</td>
                     <td>${u.email || '<span class="text-muted">-</span>'}</td>
                     <td><span class="badge ${u.role === 'parent' ? 'badge-info' : 'badge-success'}">${u.role}</span></td>
+                    <td>${u.login_code ? `<code style="font-size:0.9em;">${u.login_code}</code>` : '<span class="text-muted">-</span>'}</td>
                     <td>${u.families.map(f => `<span class="family-chip">${f.name}</span>`).join('') || '<span class="text-muted">-</span>'}</td>
                     <td>
                         ${u.email_verified ? '<span class="badge badge-success">Verifiziert</span>' : u.email ? '<span class="badge badge-warning">Ausstehend</span>' : ''}
@@ -1304,6 +1385,7 @@ ADMIN_HTML = """
                         <button class="btn btn-primary btn-sm" onclick="editUser(${u.id})">Bearbeiten</button>
                         ${!u.email_verified && u.email ? `<button class="btn btn-success btn-sm" onclick="verifyUser(${u.id})">Verifizieren</button>` : ''}
                         <button class="btn btn-warning btn-sm" onclick="toggleUser(${u.id})">${u.is_active ? 'Deaktiv.' : 'Aktivieren'}</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id}, '${u.name}')">Loeschen</button>
                     </td>
                 </tr>
             `).join('');
@@ -1346,7 +1428,7 @@ ADMIN_HTML = """
                     <td>${t.id}</td>
                     <td>${t.title}</td>
                     <td>${t.tan_reward} Min</td>
-                    <td>${t.target_device || '-'}</td>
+                    <td>${t.target_devices ? t.target_devices.join(', ') : '-'}</td>
                     <td>${t.family_name || '<span class="text-muted">-</span>'}</td>
                     <td><span class="badge ${t.is_active ? 'badge-success' : 'badge-secondary'}">${t.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
                     <td><button class="btn btn-warning btn-sm" onclick="toggleTask(${t.id})">${t.is_active ? 'Deaktiv.' : 'Aktivieren'}</button></td>
@@ -1402,6 +1484,18 @@ ADMIN_HTML = """
         // Actions
         async function verifyUser(id) { await api(`/admin/users/${id}/verify`, { method: 'POST' }); loadUsers(); }
         async function toggleUser(id) { await api(`/admin/users/${id}/toggle-active`, { method: 'POST' }); loadUsers(); }
+        async function deleteUser(id, name) {
+            if (!confirm(`ACHTUNG: User "${name}" wird DAUERHAFT geloescht inkl. aller Daten (Submissions, Ledger, Familien-Mitgliedschaften).\\n\\nDies kann NICHT rueckgaengig gemacht werden!\\n\\nWirklich loeschen?`)) return;
+            const r = await api(`/admin/users/${id}`, { method: 'DELETE' });
+            if (r && r._ok) {
+                alert(r.message || 'User wurde geloescht');
+                loadUsers();
+                loadFamilies();
+                loadStats();
+            } else {
+                alert(r?.detail || 'Fehler beim Loeschen');
+            }
+        }
         async function toggleTask(id) { await api(`/admin/tasks/${id}/toggle-active`, { method: 'POST' }); loadTasks(); }
         async function regenerateCode(id) { const r = await api(`/admin/families/${id}/regenerate-code`, { method: 'POST' }); if (r) alert(r.message); loadFamilies(); }
         async function removeMember(fid, uid) { if (confirm('Wirklich entfernen?')) { await api(`/admin/families/${fid}/members/${uid}`, { method: 'DELETE' }); loadFamilies(); } }
@@ -1414,10 +1508,25 @@ ADMIN_HTML = """
             document.getElementById('editUserName').value = currentEditUser.name;
             document.getElementById('editUserEmail').value = currentEditUser.email || '';
             document.getElementById('editUserRole').value = currentEditUser.role;
+            document.getElementById('editUserLoginCode').textContent = currentEditUser.login_code || '-';
             document.getElementById('editUserPassword').value = '';
             document.getElementById('userModalMessage').innerHTML = '';
             renderUserFamilies();
             showModal('userModal');
+        }
+
+        async function generateLoginCode() {
+            const userId = document.getElementById('editUserId').value;
+            const r = await api(`/admin/users/${userId}/generate-login-code`, { method: 'POST' });
+            if (r && r._ok) {
+                const code = r.message.replace('Login-Code: ', '');
+                document.getElementById('editUserLoginCode').textContent = code;
+                currentEditUser.login_code = code;
+                document.getElementById('userModalMessage').innerHTML = '<div class="success">Neuer Login-Code generiert!</div>';
+                loadUsers();
+            } else {
+                document.getElementById('userModalMessage').innerHTML = `<div class="error">${r?.detail || 'Fehler'}</div>`;
+            }
         }
 
         function renderUserFamilies() {
@@ -1452,14 +1561,17 @@ ADMIN_HTML = """
         async function addUserToFamily() {
             const familyId = document.getElementById('addToFamilySelect').value;
             const userId = document.getElementById('editUserId').value;
-            if (!familyId) return;
+            if (!familyId) {
+                document.getElementById('userModalMessage').innerHTML = '<div class="error">Bitte Familie auswaehlen</div>';
+                return;
+            }
             const r = await api(`/admin/families/${familyId}/members`, { method: 'POST', body: JSON.stringify({ user_id: parseInt(userId), role_in_family: currentEditUser.role === 'parent' ? 'parent' : 'child' }) });
-            if (r && r.success !== false) {
+            if (r && r._ok) {
                 currentEditUser.families.push({ id: parseInt(familyId), name: families.find(f => f.id == familyId)?.name, role: currentEditUser.role === 'parent' ? 'parent' : 'child' });
                 renderUserFamilies();
                 document.getElementById('userModalMessage').innerHTML = '<div class="success">Hinzugefuegt!</div>';
             } else {
-                document.getElementById('userModalMessage').innerHTML = `<div class="error">${r?.message || 'Fehler'}</div>`;
+                document.getElementById('userModalMessage').innerHTML = `<div class="error">${r?.detail || r?.message || 'Fehler'}</div>`;
             }
         }
 
@@ -1472,25 +1584,35 @@ ADMIN_HTML = """
 
         async function createFamily() {
             const name = document.getElementById('newFamilyName').value.trim();
-            if (!name) return;
+            if (!name) {
+                document.getElementById('createFamilyMessage').innerHTML = '<div class="error">Bitte Namen eingeben</div>';
+                return;
+            }
             const r = await api('/admin/families', { method: 'POST', body: JSON.stringify({ name }) });
-            if (r && r.id) {
+            if (r && r._ok) {
                 document.getElementById('createFamilyMessage').innerHTML = `<div class="success">Familie erstellt! Code: ${r.invite_code}</div>`;
                 document.getElementById('newFamilyName').value = '';
                 loadFamilies();
                 setTimeout(() => closeModal('createFamilyModal'), 2000);
+            } else {
+                document.getElementById('createFamilyMessage').innerHTML = `<div class="error">${r?.detail || 'Fehler'}</div>`;
             }
         }
 
         async function addTan() {
+            const tanCode = document.getElementById('newTanCode').value.trim();
+            if (!tanCode) {
+                document.getElementById('addTanMessage').innerHTML = '<div class="error">Bitte TAN Code eingeben</div>';
+                return;
+            }
             const data = {
-                tan_code: document.getElementById('newTanCode').value,
+                tan_code: tanCode,
                 minutes: parseInt(document.getElementById('newTanMinutes').value),
                 target_device: document.getElementById('newTanDevice').value,
                 family_id: document.getElementById('newTanFamily').value ? parseInt(document.getElementById('newTanFamily').value) : null
             };
             const r = await api('/admin/tan-pool', { method: 'POST', body: JSON.stringify(data) });
-            if (r && r.success !== false) {
+            if (r && r._ok) {
                 document.getElementById('addTanMessage').innerHTML = '<div class="success">TAN hinzugefuegt!</div>';
                 document.getElementById('newTanCode').value = '';
                 loadTanPool();
@@ -1510,7 +1632,7 @@ ADMIN_HTML = """
             if (newPw.length < 8) { msgDiv.innerHTML = '<div class="error">Passwort muss mind. 8 Zeichen haben</div>'; return; }
 
             const r = await api('/admin/change-password', { method: 'POST', body: JSON.stringify({ current_password: current, new_password: newPw }) });
-            if (r && r.success !== false) {
+            if (r && r._ok) {
                 msgDiv.innerHTML = '<div class="success">Passwort geaendert!</div>';
                 document.getElementById('currentPassword').value = '';
                 document.getElementById('newPassword').value = '';

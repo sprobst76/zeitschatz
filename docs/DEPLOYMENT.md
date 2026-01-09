@@ -13,18 +13,19 @@
 ```bash
 # Vom lokalen Rechner:
 rsync -avz --exclude '.venv' --exclude 'build' --exclude '.dart_tool' \
-  /home/spro/development/ZeitSchatz/ \
-  root@YOUR_SERVER_IP:/srv/zeitschatz/
+  /pfad/zu/ZeitSchatz/ \
+  user@your-server:/srv/zeitschatz/
 ```
 
 ### 2. Auf dem VPS
 
 ```bash
-ssh root@YOUR_SERVER_IP
+ssh user@your-server
 cd /srv/zeitschatz
 
-# Prüfen dass .env.prod existiert
-cat .env.prod
+# .env.prod aus .env.prod.sample erstellen und anpassen
+cp .env.prod.sample .env.prod
+nano .env.prod  # Domain und SECRET_KEY setzen
 
 # Deployment starten
 ./deploy.sh
@@ -32,36 +33,36 @@ cat .env.prod
 
 ### 3. DNS konfigurieren
 
-Stelle sicher, dass diese DNS-Einträge existieren:
+Stelle sicher, dass diese DNS-Eintraege existieren:
 
 ```
-zeitschatz-api.your-domain.example -> YOUR_SERVER_IP
-zeitschatz.your-domain.example     -> YOUR_SERVER_IP
+zeitschatz-api.YOUR_DOMAIN -> YOUR_SERVER_IP
+zeitschatz.YOUR_DOMAIN     -> YOUR_SERVER_IP
 ```
 
 ## URLs nach Deployment
 
-- **API**: https://zeitschatz-api.your-domain.example
-- **Web-App**: https://zeitschatz.your-domain.example
-- **Health-Check**: https://zeitschatz-api.your-domain.example/health
+- **API**: https://zeitschatz-api.YOUR_DOMAIN
+- **Web-App**: https://zeitschatz.YOUR_DOMAIN
+- **Health-Check**: https://zeitschatz-api.YOUR_DOMAIN/health
 
 ## Android App
 
-Die Produktions-APK ist vorkonfiguriert für die API:
+Die Produktions-APK wird mit dem Deploy-Script gebaut:
 
-```
-/home/spro/development/ZeitSchatz/ZeitSchatz-prod.apk
+```bash
+./scripts/deploy-apk.sh
 ```
 
 ### Installation auf Android
 
-1. APK auf das Gerät übertragen (USB, Cloud, etc.)
+1. APK auf das Geraet uebertragen (USB, Cloud, etc.)
 2. In den Einstellungen "Unbekannte Quellen" erlauben
-3. APK öffnen und installieren
+3. APK oeffnen und installieren
 
 ## Erste Benutzer anlegen
 
-Nach dem Deployment müssen Benutzer angelegt werden:
+Nach dem Deployment muessen Benutzer angelegt werden:
 
 ```bash
 # Auf dem VPS
@@ -74,12 +75,12 @@ Oder via API:
 
 ```bash
 # Login als Parent (nach erstem Seed)
-TOKEN=$(curl -s -X POST https://zeitschatz-api.your-domain.example/auth/login \
+TOKEN=$(curl -s -X POST https://zeitschatz-api.YOUR_DOMAIN/auth/login \
   -H "Content-Type: application/json" \
   -d '{"user_id": 1, "pin": "1234"}' | jq -r '.access_token')
 
-# Kind hinzufügen
-curl -X POST https://zeitschatz-api.your-domain.example/users \
+# Kind hinzufuegen
+curl -X POST https://zeitschatz-api.YOUR_DOMAIN/users \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name": "Lisa", "role": "child", "pin": "1111"}'

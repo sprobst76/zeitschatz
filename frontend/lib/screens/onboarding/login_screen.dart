@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -42,7 +43,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
 
       // Set session first so apiClientProvider gets updated with token
-      ref.read(sessionProvider.notifier).setSession(
+      await ref.read(sessionProvider.notifier).setSession(
         token: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         userId: 0, // Will be set from JWT claims
@@ -62,15 +63,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (families.isNotEmpty) {
         final familyId = families[0]['id'] as int;
         final familyName = families[0]['name'] as String;
-        ref.read(sessionProvider.notifier).setFamily(
+        await ref.read(sessionProvider.notifier).setFamily(
           familyId: familyId,
           familyName: familyName,
         );
+
+        // Trigger password manager save prompt
+        TextInput.finishAutofillContext();
 
         if (mounted) {
           context.go('/parent');
         }
       } else {
+        // Trigger password manager save prompt
+        TextInput.finishAutofillContext();
+
         if (mounted) {
           context.go('/family-setup');
         }
@@ -99,9 +106,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
+        child: AutofillGroup(
+          child: Form(
+            key: _formKey,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Icon(
@@ -114,6 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
                 decoration: const InputDecoration(
                   labelText: 'E-Mail',
                   prefixIcon: Icon(Icons.email_outlined),
@@ -134,6 +143,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.password],
                 onFieldSubmitted: (_) => _login(),
                 decoration: InputDecoration(
                   labelText: 'Passwort',
@@ -210,6 +220,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ],
               ),
             ],
+          ),
           ),
         ),
       ),

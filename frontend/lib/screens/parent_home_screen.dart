@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../services/session_storage.dart';
 import '../state/app_state.dart';
 import '../state/family_state.dart';
 import 'parent_history_screen.dart';
@@ -96,9 +97,9 @@ class _ParentHomeScreenState extends ConsumerState<ParentHomeScreen> {
     }
   }
 
-  void _logout() {
-    ref.read(sessionProvider.notifier).clear();
-    context.go('/welcome');
+  Future<void> _logout() async {
+    await ref.read(sessionProvider.notifier).clear();
+    if (mounted) context.go('/welcome');
   }
 
   void _openFamilySettings() {
@@ -109,6 +110,25 @@ class _ParentHomeScreenState extends ConsumerState<ParentHomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const ParentHistoryScreen()),
+    );
+  }
+
+  Future<void> _openSettings() async {
+    final storage = SessionStorage();
+    final biometricAvailable = await storage.isBiometricAvailable();
+    final biometricEnabled = await storage.isBiometricEnabled();
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => _SettingsSheet(
+        biometricAvailable: biometricAvailable,
+        biometricEnabled: biometricEnabled,
+        onBiometricChanged: (enabled) async {
+          await storage.setBiometricEnabled(enabled);
+        },
+      ),
     );
   }
 
@@ -140,13 +160,9 @@ class _ParentHomeScreenState extends ConsumerState<ParentHomeScreen> {
             tooltip: 'Familie verwalten',
           ),
           IconButton(
-            onPressed: () => ref.read(themeProvider.notifier).toggleTheme(),
-            icon: Icon(
-              ref.watch(themeProvider) == ThemeMode.dark
-                  ? Icons.light_mode
-                  : Icons.dark_mode,
-            ),
-            tooltip: 'Theme wechseln',
+            onPressed: _openSettings,
+            icon: const Icon(Icons.settings),
+            tooltip: 'Einstellungen',
           ),
           IconButton(
             onPressed: _logout,
@@ -164,6 +180,96 @@ class _ParentHomeScreenState extends ConsumerState<ParentHomeScreen> {
         onTap: (value) => setState(() => _index = value),
         type: BottomNavigationBarType.fixed,
         items: navItems,
+      ),
+    );
+  }
+}
+
+class _SettingsSheet extends StatefulWidget {
+  final bool biometricAvailable;
+  final bool biometricEnabled;
+  final Future<void> Function(bool enabled) onBiometricChanged;
+
+  const _SettingsSheet({
+    required this.biometricAvailable,
+    required this.biometricEnabled,
+    required this.onBiometricChanged,
+  });
+
+  @override
+  State<_SettingsSheet> createState() => _SettingsSheetState();
+}
+
+class _SettingsSheetState extends State<_SettingsSheet> {
+  late bool _biometricEnabled;
+
+  @override
+  void initState() {
+    super.initState();
+    _biometricEnabled = widget.biometricEnabled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Einstellungen',
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            if (widget.biometricAvailable) ...[
+              SwitchListTile(
+                title: const Text('Fingerabdruck-Anmeldung'),
+                subtitle: const Text('Schneller Zugriff mit Fingerabdruck'),
+                secondary: const Icon(Icons.fingerprint),
+                value: _biometricEnabled,
+                onChanged: (value) async {
+                  setState(() => _biometricEnabled = value);
+                  await widget.onBiometricChanged(value);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          value
+                              ? 'Fingerabdruck-Anmeldung aktiviert'
+                              : 'Fingerabdruck-Anmeldung deaktiviert',
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ] else ...[
+              ListTile(
+                leading: const Icon(Icons.fingerprint, color: Colors.grey),
+                title: const Text('Fingerabdruck-Anmeldung'),
+                subtitle: const Text('Nicht verfuegbar auf diesem Geraet'),
+                enabled: false,
+              ),
+            ],
+            const Divider(),
+            Consumer(
+              builder: (context, ref, _) => SwitchListTile(
+                title: const Text('Dunkles Design'),
+                secondary: const Icon(Icons.dark_mode),
+                value: ref.watch(themeProvider) == ThemeMode.dark,
+                onChanged: (value) {
+                  ref.read(themeProvider.notifier).setTheme(
+                    value ? ThemeMode.dark : ThemeMode.light,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
