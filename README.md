@@ -1,39 +1,122 @@
-# 🪙 ZeitSchatz
+# ZeitSchatz
 
-Familieninterne App, mit der Kinder durch erledigte Aufgaben virtuelle TANs verdienen. Eltern bestätigen, verwalten Regeln und zahlen TANs manuell aus einem vorgehaltenen Kisi-Vorrat aus (keine automatische Integration). TANs sind 6–8-stellige Codes, gerätegebunden (z. B. Handy/PC) und haben eine Dauer (Minuten) + optionales Ablaufdatum.
+Eine Familien-App zur Aufgabenverwaltung und Belohnung. Kinder erledigen Aufgaben und verdienen Bildschirmzeit (TANs), die von Eltern verwaltet und freigegeben werden.
 
-## Schnellstart (Entwicklung)
+## Features
 
-- Voraussetzungen: Docker, Docker Compose, Python 3.11+, Flutter/Dart SDK, `uv` oder `poetry` (Backend).
-- Backend lokal starten:
-  ```bash
-  cp .env.sample .env
-  # optional: DEV_BYPASS_AUTH=true für Heimnetz ohne Login
-  docker-compose up -d db
-  uvicorn app.main:app --app-dir backend/app --host 0.0.0.0 --port 8070
-  ```
-- Flutter-App:
-  ```bash
-  cd frontend
-  flutter pub get
-  flutter run -d linux   # oder -d android / -d chrome --web-port=8081
-  ```
-- Auth: `POST /auth/login` mit `user_id` + `pin` → Bearer-Token. (User-Seeding/Refresh noch offen.)
-- Bekannte Einschränkung: In-Process-TestClient (Starlette/httpx) hängt beim ersten Request in dieser Umgebung. Workaround: echten `uvicorn` starten und via curl/httpx testen (siehe unten).
-- Fotos: `/photos/upload?submission_id=` (multipart) speichert im lokalen `STORAGE_DIR`, setzt `photo_expires_at`. Abruf via `/photos/{submission_id}` (auth erforderlich). Retention-Job noch folgen.
-- Retention-Job: Läuft täglich 03:00 (APScheduler) und löscht abgelaufene Fotos (`photo_expires_at` oder mtime-Fallback). Logs in stdout.
-- Push: `POST /notifications/register` speichert FCM-Token. Hooks: Bei neuer Submission Push an Eltern (`submission_pending`), bei Approval optional an Kind (`submission_approved`). Ohne `FCM_SERVER_KEY` wird Push nur geloggt/übersprungen.
-- Flutter-Skeleton: `flutter run` startet eine einfache Rollenauswahl (Seed-PINs 1234/0000), Child-Home zeigt Tasks, Parent-Inbox zeigt Pending-Submissions. API-Client unter `frontend/lib/services/api_client.dart`.
-- Plattform-Builds:
-  - Android: `flutter run -d android` bzw. `flutter build apk --release`
-  - Linux: `flutter config --enable-linux-desktop` → `flutter run -d linux` / `flutter build linux`
-  - Web/Chrome: `flutter config --enable-web` → `flutter run -d chrome` / `flutter build web`
-- Für Web CORS anpassen (`CORS_ORIGINS` in `.env` als JSON-Liste, z. B. `["http://192.168.0.144:8081"]`), Backend per TLS/Proxy bereitstellen.
-- Heimnetz-Dev ohne Login: Setze in `.env` `DEV_BYPASS_AUTH=true` (optional `DEV_USER_ID/ROLE`). Dann akzeptiert das Backend alle Anfragen als den konfigurierten Nutzer.
-- Backend-Smoketest + Linux-Build: `./scripts/dev_smoke.sh` (setzt laufende GUI für Linux voraus).
-- Tests (später ergänzen): `uv run pytest` bzw. `poetry run pytest` und `flutter test`.
+- **Aufgabenverwaltung**: Eltern erstellen Aufgaben mit Beschreibung und TAN-Belohnung
+- **Foto-Nachweis**: Kinder koennen Fotos als Erledigungsnachweis hochladen
+- **TAN-System**: Virtuelle Zeitgutscheine fuer verschiedene Geraete (Handy, PC, Tablet)
+- **Multi-Familie**: Unterstuetzung fuer mehrere Familien mit Einladungscodes
+- **Kindgerechter Login**: Einfache Login-Codes wie "TIGER-BLAU-42"
+- **Biometrische Anmeldung**: Fingerabdruck-Login fuer Eltern
+- **Web & Android**: Plattformuebergreifend nutzbar
 
-Mehr Details im vollständigen Plan: `PROJECT.md`.
+## Screenshots
 
-## Ops/Remote
-- Kurze Betriebs- und Remote-Notizen: `docs/ops.md`.
+*Coming soon*
+
+## Installation
+
+### Android App
+
+1. APK von [Releases](../../releases) herunterladen
+2. Auf dem Geraet "Unbekannte Quellen" erlauben
+3. APK installieren
+
+### Web-Version
+
+Die Web-App ist unter deiner konfigurierten Domain erreichbar.
+
+### Selbst hosten
+
+Siehe [Deployment Guide](docs/DEPLOYMENT.md) fuer eine detaillierte Anleitung.
+
+## Entwicklung
+
+### Voraussetzungen
+
+- Python 3.11+
+- Flutter/Dart SDK 3.3+
+- Docker & Docker Compose
+
+### Backend starten
+
+```bash
+# Umgebungsvariablen kopieren
+cp .env.sample .env
+
+# Datenbank starten
+docker-compose up -d db
+
+# Backend starten
+uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8070 --reload
+```
+
+### Frontend starten
+
+```bash
+cd frontend
+flutter pub get
+
+# Linux Desktop
+flutter run -d linux
+
+# Android
+flutter run -d android
+
+# Web (Port 8081)
+flutter run -d chrome --web-port=8081
+```
+
+### Tests
+
+```bash
+# Backend
+cd backend && pytest
+
+# Frontend
+cd frontend && flutter test
+```
+
+## Architektur
+
+```
+ZeitSchatz/
+├── backend/           # FastAPI Backend (Python)
+│   ├── app/
+│   │   ├── api/       # REST Endpoints
+│   │   ├── models/    # SQLAlchemy Models
+│   │   ├── schemas/   # Pydantic Schemas
+│   │   └── services/  # Business Logic
+│   └── alembic/       # Database Migrations
+├── frontend/          # Flutter App (Dart)
+│   └── lib/
+│       ├── screens/   # UI Screens
+│       ├── state/     # Riverpod State
+│       └── services/  # API Client
+└── docs/              # Dokumentation
+```
+
+## API Dokumentation
+
+Nach dem Start des Backends ist die interaktive API-Dokumentation verfuegbar unter:
+- Swagger UI: `http://localhost:8070/docs`
+- ReDoc: `http://localhost:8070/redoc`
+
+## Mitwirken
+
+Siehe [CONTRIBUTING.md](CONTRIBUTING.md) fuer Richtlinien zur Mitarbeit.
+
+## Sicherheit
+
+Sicherheitsprobleme bitte an die im [SECURITY.md](SECURITY.md) genannte Adresse melden.
+
+## Lizenz
+
+Dieses Projekt ist unter der MIT-Lizenz lizenziert - siehe [LICENSE](LICENSE) fuer Details.
+
+## Danksagung
+
+- Entwickelt mit [Claude Code](https://claude.ai/code)
+- Icons erstellt mit SVG
