@@ -16,7 +16,6 @@ import '../screens/family/family_members_screen.dart';
 import '../screens/family/device_providers_screen.dart';
 import '../screens/family/add_child_screen.dart';
 import '../screens/parent_home_screen.dart';
-import '../screens/role_select_screen.dart';
 import '../screens/tan_pool_screen.dart';
 import '../screens/task_editor_screen.dart';
 import '../state/app_state.dart';
@@ -61,10 +60,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/child-login',
         builder: (context, state) => const ChildLoginScreen(),
       ),
-      // Legacy role select (for backwards compatibility)
+      // Legacy role select - redirect to welcome
       GoRoute(
         path: '/role',
-        builder: (context, state) => const RoleSelectScreen(),
+        redirect: (context, state) => '/welcome',
       ),
       // Child routes
       GoRoute(
