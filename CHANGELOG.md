@@ -1,5 +1,37 @@
 # Changelog – ZeitSchatz
 
+## 2026-01-18
+
+### Multi-Family Release (v20260111-2340)
+- **APK Release**: Erste vollstaendige Multi-Family Version veroeffentlicht
+- **Web-Frontend**: Deployed auf https://zeitschatz.halbewahrheit21.de
+- **RewardProviders**: Kisi, Family Link, Manual auf Produktionsserver geseeded
+
+### Kind-Login vereinfacht
+- **Login-Code**: Neuer einfacher Login fuer Kinder mit merkbarem Code (z.B. "TIGER-BLAU-42")
+- `POST /auth/login/code` - Login nur mit Code, ohne Familiencode + PIN
+- `login_code` Feld im User-Model (unique, nullable)
+- Migration `0010_login_code.py`
+
+### Inaktive User Cleanup
+- **Auto-Cleanup Job**: User ohne Login seit 90 Tagen werden automatisch deaktiviert
+- `last_login` Feld im User-Model - wird bei jedem Login aktualisiert
+- Migration `0011_last_login.py`
+- Job laeuft taeglich um 04:00 Uhr
+
+### Admin: Permanentes Loeschen
+- **Hard Delete**: Admins koennen User und Familien permanent loeschen (nicht nur deaktivieren)
+- `DELETE /admin/users/{id}/permanent` - User und alle zugehoerigen Daten loeschen
+- `DELETE /admin/families/{id}/permanent` - Familie mit allen Mitgliedern/Tasks/TANs loeschen
+- Bestaetigung erforderlich (confirm=true Parameter)
+
+### Security
+- SECRET_KEY aus Git-History entfernt (git-filter-repo)
+- Domain/IP-Referenzen durch Platzhalter ersetzt
+- `.env.local` fuer lokale Konfiguration (nicht im Repo)
+
+---
+
 ## 2025-12-23
 
 ### Admin Dashboard (Erweitert)
