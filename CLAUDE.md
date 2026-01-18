@@ -22,10 +22,19 @@ docker-compose up -d db
 # Start dev server (from repo root, with venv activated)
 uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8070 --reload
 
-# Seed initial users (from repo root, with venv activated)
-python backend/scripts/seed_users.py
+# Seed test family (Multi-Family, recommended)
+python backend/scripts/seed_family.py --with-tasks
 # Or with custom values:
-python backend/scripts/seed_users.py --parent-name "Mama" --parent-pin "5678" --child-name "Max" --child-pin "1111"
+python backend/scripts/seed_family.py \
+  --family "Mustermann" \
+  --parent-email "papa@test.de" \
+  --parent-password "geheim123" \
+  --children "Max:1234:MAX-ROT-42,Anna:5678:ANNA-BLAU-13" \
+  --provider-pc kisi \
+  --with-tasks
+
+# Legacy: Seed single users without family (deprecated)
+python backend/scripts/seed_users.py
 
 # Run tests
 cd backend && pytest
@@ -73,15 +82,18 @@ flutter test
 - **Config**: `core/config.py` uses pydantic-settings, loads from `.env`
 
 API endpoints:
-- `/auth/login` - PIN-based auth returning JWT
-- `/users` - User CRUD (parent-only): list, create, update, deactivate
-- `/users/children` - List child users (parent-only)
-- `/tasks` - Task CRUD, `?child_id=` filters for assigned tasks
-- `/submissions` - Create/approve/retry submissions
-- `/submissions/{id}/approve` - Parent approval with TAN assignment
-- `/ledger/{child_id}` - TAN balance and history
-- `/photos/upload` - Multipart photo upload
-- `/notifications/register` - FCM token registration
+- `/auth/register` - Email/password registration (parents)
+- `/auth/login/email` - Email/password login (parents)
+- `/auth/login/pin` - Family code + PIN login (children)
+- `/auth/login/code` - Simple code login (children, e.g., "TIGER-ROT-42")
+- `/families` - Family CRUD, invite codes, join
+- `/families/{id}/children` - Add child to family
+- `/families/{id}/devices` - Configure device providers (kisi/family_link/manual)
+- `/tasks` - Task CRUD with `?family_id=` filter
+- `/submissions` - Create/approve/retry submissions (family-scoped)
+- `/tan-pool` - TAN management (family-scoped, for Kisi provider)
+- `/ledger` - TAN balance and history (family-scoped)
+- `/admin/*` - Admin dashboard API
 
 ### Frontend Structure (`frontend/lib/`)
 
@@ -112,8 +124,12 @@ API base URL is configured in `services/api_client.dart` (default: `http://192.1
 
 ## Important Notes
 
-- Backend uses JWT auth with roles (`parent`/`child`) in claims
-- Seed users: PIN `1234` for parent, `0000` for child
-- Photos are stored locally, auto-deleted after 14 days by retention job
-- In-process TestClient may hang; use live uvicorn server for API tests
-- For web builds, ensure CORS and backend TLS/proxy are configured
+- **Multi-Family**: All data is family-scoped. Users must belong to a family.
+- **Auth**: Parents use email/password, children use login codes (e.g., "MAX-ROT-42")
+- **Providers**: Each device type (pc/phone/tablet/console) can use different providers:
+  - `kisi` - TAN-based (requires TAN pool)
+  - `family_link` - Manual time tracking
+  - `manual` - Simple tracking
+- **Dev Mode**: Set `DEV_BYPASS_AUTH=true` to auto-verify emails
+- Photos are stored locally, auto-deleted after 14 days
+- Inactive users (90 days no login) are auto-deactivated
